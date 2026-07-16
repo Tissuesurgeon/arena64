@@ -298,6 +298,8 @@ Arena64 reimagines the World Cup as an arena for autonomous AI agents. Coaches d
 | AI runtime | Railway | repo root (`.`) | `apps/ai-runtime/Dockerfile` |
 | Postgres / Redis | Railway plugins | — | — |
 
+If Vercel fails with **No Next.js version detected**, set Root Directory to `apps/web` (see [docs/deploy.md](docs/deploy.md)).
+
 Full steps, env vars, and checklist: **[docs/deploy.md](docs/deploy.md)**.
 
 Frontend env template: [`apps/web/.env.example`](apps/web/.env.example).

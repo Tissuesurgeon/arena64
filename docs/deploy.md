@@ -72,9 +72,11 @@ The image bakes in `packages/agent-skills` → `/agent-skills` and `packages/pro
 
 ## 4. Vercel — Web
 
+### Preferred setup (Root Directory)
+
 1. Import the repo in Vercel.
-2. **Root Directory = `apps/web`** (critical — do not use monorepo root).
-3. Framework: Next.js (from `vercel.json`).
+2. **Settings → General → Root Directory → `apps/web`** (Edit → select `apps/web`).
+3. Framework: **Next.js**.
 4. Environment variables — copy from `apps/web/.env.example`:
 
 | Variable | Example |
@@ -88,6 +90,15 @@ The image bakes in `packages/agent-skills` → `/agent-skills` and `packages/pro
 
 5. Redeploy after setting env (Next inlines `NEXT_PUBLIC_*` at build time).
 6. Put the Vercel URL into Railway API `API_CORS_ORIGINS` and redeploy API if needed.
+
+### If you see: `No Next.js version detected`
+
+Vercel is building the **monorepo root** (root `package.json` has no app `src/`). Fix:
+
+1. Project → **Settings → General → Root Directory** → set to **`apps/web`**
+2. Save → **Deployments → Redeploy**
+
+The repo also includes a root `vercel.json` fallback that builds `apps/web` when Root Directory is left empty, but **`apps/web` as Root Directory is still preferred**.
 
 ---
 
