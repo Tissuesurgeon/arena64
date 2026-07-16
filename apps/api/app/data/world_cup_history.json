@@ -1,0 +1,58 @@
+{
+  "tournaments": [
+    {
+      "year": 1930,
+      "host": "Uruguay",
+      "winner": "Uruguay",
+      "final": "Uruguay 4–2 Argentina"
+    },
+    {
+      "year": 1958,
+      "host": "Sweden",
+      "winner": "Brazil",
+      "notes": "Pelé's first World Cup; Fontaine 13 goals"
+    },
+    {
+      "year": 1966,
+      "host": "England",
+      "winner": "England",
+      "final": "England 4–2 West Germany (AET)"
+    },
+    {
+      "year": 1970,
+      "host": "Mexico",
+      "winner": "Brazil",
+      "notes": "Brazil's third title; iconic yellow kit"
+    },
+    {
+      "year": 1998,
+      "host": "France",
+      "winner": "France",
+      "final": "France 3–0 Brazil"
+    },
+    {
+      "year": 2010,
+      "host": "South Africa",
+      "winner": "Spain",
+      "final": "Spain 1–0 Netherlands (AET)"
+    },
+    {
+      "year": 2014,
+      "host": "Brazil",
+      "winner": "Germany",
+      "final": "Germany 1–0 Argentina (AET)"
+    },
+    {
+      "year": 2018,
+      "host": "Russia",
+      "winner": "France",
+      "final": "France 4–2 Croatia"
+    },
+    {
+      "year": 2022,
+      "host": "Qatar",
+      "winner": "Argentina",
+      "final": "Argentina 3–3 France (AET, Argentina on pens)"
+    }
+  ]
+}

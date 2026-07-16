@@ -1,0 +1,11 @@
+{
+  "network": "injective-evm-testnet",
+  "chain_id": 1439,
+  "InjFaucet": {
+    "address": "0x0057f3907fC6cFBf824d6e38AAB696a104d1F4F8",
+    "deployer": "0xdcAb377d838B2adb1C3c0c125e63F8dBD69F90b5",
+    "claim_amount_inj": 1,
+    "once_per_wallet": true,
+    "deploy_tx": "0xf1cd035240983d7abe2fb3a2768456ab48b78c59a6bfcd7a4e4b6ceb1c8b2f2c"
+  }
+}

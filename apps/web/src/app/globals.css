@@ -1,0 +1,52 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a.btn-press {
+    transition:
+      transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 140ms ease,
+      box-shadow 140ms ease,
+      opacity 140ms ease;
+  }
+
+  button:not(:disabled):active,
+  [role="button"]:not([aria-disabled="true"]):active,
+  a.btn-press:active {
+    transform: scale(0.96);
+    filter: brightness(0.92);
+  }
+}
+
+@layer utilities {
+  .btn-press {
+    transition:
+      transform 140ms cubic-bezier(0.22, 1, 0.36, 1),
+      filter 140ms ease,
+      box-shadow 140ms ease;
+  }
+
+  .btn-press:active:not(:disabled) {
+    transform: scale(0.96);
+    filter: brightness(0.92);
+  }
+
+  @keyframes btn-tap {
+    0% {
+      transform: scale(1);
+    }
+    40% {
+      transform: scale(0.94);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .btn-tap:active:not(:disabled) {
+    animation: btn-tap 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+}

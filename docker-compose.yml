@@ -1,0 +1,112 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: arena64
+      POSTGRES_PASSWORD: arena64
+      POSTGRES_DB: arena64
+    ports:
+      # Host 15432 avoids clash with system Postgres on 5432
+      - "15432:5432"
+    volumes:
+      - arena64_pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U arena64"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  api:
+    build:
+      context: ./apps/api
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql+asyncpg://arena64:arena64@postgres:5432/arena64
+      DATABASE_URL_SYNC: postgresql://arena64:arena64@postgres:5432/arena64
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8000:8000"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./apps/api:/app
+      - ./packages/agent-skills:/agent-skills:ro
+
+  web:
+    build:
+      context: ./apps/web
+      dockerfile: Dockerfile
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000/ws
+    ports:
+      - "3000:3000"
+    depends_on:
+      - api
+    volumes:
+      - ./apps/web:/app
+      - /app/node_modules
+      - /app/.next
+
+  ai-runtime:
+    build:
+      context: ./apps/ai-runtime
+      dockerfile: Dockerfile
+    environment:
+      ARENA64_API_URL: http://api:8000
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-arena64-dev-service-key}
+      RUNTIME_POLL_SECONDS: "2.5"
+      RUNTIME_LLM_ENABLED: ${RUNTIME_LLM_ENABLED:-false}
+      RUNTIME_MAX_PARALLEL: "16"
+      RUNTIME_WORKER_COUNT: "2"
+      RUNTIME_WORKER_ID: "0"
+      OLLAMA_BASE_URL: ${OLLAMA_BASE_URL:-http://host.docker.internal:11434/v1}
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5}
+    volumes:
+      - ./packages/prompts:/agent-prompts:ro
+      - ./packages/agent-skills:/agent-skills:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+    deploy:
+      replicas: 1
+    # Scale fillers: docker compose up -d --scale ai-runtime=2
+    # Set RUNTIME_WORKER_ID uniquely per replica (0,1,…) via override file if sharding.
+
+  ai-runtime-b:
+    build:
+      context: ./apps/ai-runtime
+      dockerfile: Dockerfile
+    profiles: ["parallel-runtime"]
+    environment:
+      ARENA64_API_URL: http://api:8000
+      SERVICE_API_KEY: ${SERVICE_API_KEY:-arena64-dev-service-key}
+      RUNTIME_POLL_SECONDS: "2.5"
+      RUNTIME_LLM_ENABLED: "false"
+      RUNTIME_MAX_PARALLEL: "16"
+      RUNTIME_WORKER_COUNT: "2"
+      RUNTIME_WORKER_ID: "1"
+    volumes:
+      - ./packages/prompts:/agent-prompts:ro
+      - ./packages/agent-skills:/agent-skills:ro
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  arena64_pg:
