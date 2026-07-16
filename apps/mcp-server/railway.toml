@@ -1,0 +1,11 @@
+# Optional Railway service for Arena64 MCP Server
+# Root Directory = apps/mcp-server
+# Env: ARENA64_API_URL (Railway API URL), SERVICE_API_KEY
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

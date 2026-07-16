@@ -20,3 +20,5 @@ htmlcov/
 *.sqlite3
 .idea/
 .vscode/
+blockchain/cache/
+blockchain/out/

@@ -8,7 +8,9 @@ import { walletConnect } from "wagmi/connectors/walletConnect";
 import { injectiveEvm } from "./chain";
 
 const connectors = [injected({ shimDisconnect: true })];
-const wcId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+const wcId =
+  process.env.NEXT_PUBLIC_WC_PROJECT_ID ||
+  process.env.NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID;
 if (wcId) {
   connectors.push(
     walletConnect({

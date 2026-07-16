@@ -65,8 +65,9 @@ services:
 
   ai-runtime:
     build:
-      context: ./apps/ai-runtime
-      dockerfile: Dockerfile
+      # Monorepo root so image includes packages/agent-skills + packages/prompts
+      context: .
+      dockerfile: apps/ai-runtime/Dockerfile
     environment:
       ARENA64_API_URL: http://api:8000
       SERVICE_API_KEY: ${SERVICE_API_KEY:-arena64-dev-service-key}
@@ -90,8 +91,8 @@ services:
 
   ai-runtime-b:
     build:
-      context: ./apps/ai-runtime
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: apps/ai-runtime/Dockerfile
     profiles: ["parallel-runtime"]
     environment:
       ARENA64_API_URL: http://api:8000

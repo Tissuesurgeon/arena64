@@ -1,12 +1,14 @@
 # Railway service config for Arena64 API (apps/api)
 # In Railway dashboard: Root Directory = apps/api
+# Attach Railway Postgres + Redis; set DATABASE_URL and REDIS_URL from those services.
+# Also set SECRET_KEY, SERVICE_API_KEY, API_CORS_ORIGINS (Vercel URL). See docs/deploy.md.
 
 [build]
 builder = "DOCKERFILE"
 dockerfilePath = "Dockerfile"
 
 [deploy]
-healthcheckPath = "/docs"
+healthcheckPath = "/health"
 healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

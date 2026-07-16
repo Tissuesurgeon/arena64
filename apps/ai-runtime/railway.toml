@@ -1,0 +1,11 @@
+# Railway service config for Arena64 AI Runtime
+# In Railway dashboard: Root Directory = repository root (.)
+# Required env: ARENA64_API_URL, SERVICE_API_KEY (same key as API)
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "apps/ai-runtime/Dockerfile"
+
+[deploy]
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10

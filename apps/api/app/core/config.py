@@ -13,6 +13,26 @@ _API_ENV = _CONFIG_FILE.parents[2] / ".env"
 _ENV_FILES = tuple(str(p) for p in (_ROOT_ENV, _API_ENV) if p.is_file())
 
 
+def normalize_async_database_url(url: str) -> str:
+    """Railway/Heroku often inject postgres:// or postgresql:// — SQLAlchemy async needs +asyncpg."""
+    u = (url or "").strip()
+    if u.startswith("postgres://"):
+        u = "postgresql://" + u[len("postgres://") :]
+    if u.startswith("postgresql://") and "+asyncpg" not in u.split("://", 1)[0]:
+        u = "postgresql+asyncpg://" + u[len("postgresql://") :]
+    return u
+
+
+def normalize_sync_database_url(url: str) -> str:
+    """Sync drivers want postgresql:// (no +asyncpg)."""
+    u = (url or "").strip()
+    if u.startswith("postgres://"):
+        u = "postgresql://" + u[len("postgres://") :]
+    if "+asyncpg" in u:
+        u = u.replace("postgresql+asyncpg://", "postgresql://", 1)
+    return u
+
+
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=_ENV_FILES or ".env",
@@ -99,6 +119,15 @@ class Settings(BaseSettings):
     def resolve_network_and_ai(self) -> "Settings":
         from app.integrations.injective.networks import get_profile
         from app.integrations.qwen.model_studio import resolve_qwen_base_url
+
+        # Railway often injects only DATABASE_URL as postgres(ql)://…
+        self.database_url = normalize_async_database_url(self.database_url)
+        sync_raw = (self.database_url_sync or "").strip()
+        default_sync = "postgresql://arena64:arena64@localhost:5432/arena64"
+        if not sync_raw or sync_raw == default_sync or "+asyncpg" in sync_raw:
+            self.database_url_sync = normalize_sync_database_url(self.database_url)
+        else:
+            self.database_url_sync = normalize_sync_database_url(sync_raw)
 
         profile = get_profile(self.injective_network)
         self.injective_network = profile.name
