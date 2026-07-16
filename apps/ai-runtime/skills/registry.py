@@ -13,14 +13,28 @@ class Skill:
     content: str
 
 
+def _default_skills_dirs() -> list[Path]:
+    """Resolve skills paths for monorepo checkout and Docker (/runtime/skills/…)."""
+    here = Path(__file__).resolve()
+    dirs: list[Path] = [
+        Path("/agent-skills"),  # baked into backend / AI-runtime images
+    ]
+    # Walk up looking for packages/agent-skills (local: …/arena64/packages/…)
+    for parent in here.parents:
+        candidate = parent / "packages" / "agent-skills"
+        if candidate.is_dir():
+            dirs.append(candidate)
+            break
+    return dirs
+
+
 class SkillsRegistry:
     def __init__(self, skills_dir: Path | None = None) -> None:
-        candidates = [
-            skills_dir,
-            Path(__file__).resolve().parents[3] / "packages" / "agent-skills",
+        candidates = [skills_dir, *_default_skills_dirs()]
+        self.skills_dir = next(
+            (p for p in candidates if p and p.exists()),
             Path("/agent-skills"),
-        ]
-        self.skills_dir = next((p for p in candidates if p and p.exists()), candidates[1])
+        )
         self._skills: dict[str, Skill] = {}
         self._load()
 

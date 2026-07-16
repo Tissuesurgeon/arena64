@@ -37,14 +37,13 @@ COPY packages/prompts /agent-prompts
 COPY scripts/start-backend.sh /start-backend.sh
 RUN chmod +x /start-backend.sh
 
-ENV PORT=8000 \
-    ARENA64_API_URL=http://127.0.0.1:8000 \
-    RUNTIME_POLL_SECONDS=2.5 \
+# PORT is injected by Railway (often 8080). start-backend.sh sets ARENA64_API_URL to match.
+ENV RUNTIME_POLL_SECONDS=2.5 \
     RUNTIME_WORKER_ID=0
 
 EXPOSE 8000
 
-HEALTHCHECK --interval=30s --timeout=5s --start-period=50s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
   CMD curl -fsS "http://127.0.0.1:${PORT:-8000}/health" >/dev/null || exit 1
 
 CMD ["/start-backend.sh"]

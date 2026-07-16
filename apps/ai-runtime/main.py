@@ -30,20 +30,29 @@ WORKER_ID = os.getenv("RUNTIME_WORKER_ID", "0")
 MAX_PARALLEL = int(os.getenv("RUNTIME_MAX_PARALLEL", "16"))
 
 
+def _competitor_prompt_candidates() -> list[Path]:
+    """Monorepo checkout or Docker bake path (/agent-prompts). Never index parents[N]."""
+    paths = [Path("/agent-prompts/competitor.system.md")]
+    here = Path(__file__).resolve()
+    for parent in here.parents:
+        candidate = parent / "packages" / "prompts" / "competitor.system.md"
+        if candidate.is_file():
+            paths.append(candidate)
+            break
+    return paths
+
+
 def _load_competitor_system() -> str:
-    candidates = [
-        Path(__file__).resolve().parents[2] / "packages" / "prompts" / "competitor.system.md",
-        Path("/agent-prompts/competitor.system.md"),
-    ]
-    for path in candidates:
-        if path.is_file():
-            text = path.read_text(encoding="utf-8")
-            if "COMPETITOR_SYSTEM" in text and '"""' in text:
-                start = text.find('"""', text.find("COMPETITOR_SYSTEM")) + 3
-                end = text.find('"""', start)
-                if start > 2 and end > start:
-                    return text[start:end].strip()
-            return text.strip()
+    for path in _competitor_prompt_candidates():
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8")
+        if "COMPETITOR_SYSTEM" in text and '"""' in text:
+            start = text.find('"""', text.find("COMPETITOR_SYSTEM")) + 3
+            end = text.find('"""', start)
+            if start > 2 and end > start:
+                return text[start:end].strip()
+        return text.strip()
     skill = skills_registry.competitor_prompt()
     return skill or DecisionEngine().system_prompt
 
