@@ -47,8 +47,19 @@ export function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 border-b border-[var(--turf-line)] bg-[rgba(6,16,24,0.78)] backdrop-blur-md">
       <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3">
-        <Link href="/" className="led-title shrink-0 text-2xl text-[var(--trophy-gold)]">
-          Arena64
+        <Link
+          href="/"
+          className="led-title flex shrink-0 items-center gap-2 text-2xl text-[var(--trophy-gold)]"
+        >
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.svg"
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 rounded-lg"
+          />
+          <span>Arena64</span>
         </Link>
 
         <div className="flex shrink-0 items-center gap-2 sm:gap-3">

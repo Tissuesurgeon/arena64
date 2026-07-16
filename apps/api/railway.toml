@@ -1,19 +1,21 @@
-# Railway service config for Arena64 API
+# Prefer the monorepo-root railway.toml + Dockerfile (API + AI runtime).
+# This file remains for an API-only service if you intentionally split workers.
 #
-# Dashboard settings (required):
-#   Root Directory  = .          (repository root — NOT apps/api)
+# Full backend (recommended):
+#   Root Directory  = .
+#   Dockerfile path = Dockerfile
+#   Config file     = railway.toml
+#
+# API-only (advanced — you must also deploy apps/ai-runtime separately):
+#   Root Directory  = .
 #   Dockerfile path = apps/api/Dockerfile
-#   Config file     = apps/api/railway.toml  (if prompted)
-#
-# Attach Railway Postgres + Redis; set DATABASE_URL and REDIS_URL.
-# Also set SECRET_KEY, SERVICE_API_KEY, API_CORS_ORIGINS. See docs/deploy.md.
 
 [build]
 builder = "DOCKERFILE"
-dockerfilePath = "apps/api/Dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 healthcheckPath = "/health"
-healthcheckTimeout = 30
+healthcheckTimeout = 60
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 5

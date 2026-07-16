@@ -1,9 +1,10 @@
-# Arena64 API — production image for Railway
-# Build from monorepo root (required — COPY paths are relative to context):
+# Arena64 API-only image (advanced).
+# Prefer the monorepo-root Dockerfile — it runs API + AI runtime together:
+#   docker build -t arena64-backend .
+#   Railway Dockerfile path = Dockerfile
+#
+# API-only build (you must deploy apps/ai-runtime separately):
 #   docker build -f apps/api/Dockerfile .
-# Railway: Root Directory = . (repo root)
-#          Dockerfile path = apps/api/Dockerfile
-#          Config file (optional) = apps/api/railway.toml
 
 FROM python:3.12-slim AS base
 

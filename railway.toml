@@ -1,0 +1,19 @@
+# Arena64 full backend on Railway (API + AI runtime in one service)
+#
+# Dashboard:
+#   Root Directory  = . (repository root)
+#   Dockerfile path = Dockerfile
+#   Config file     = railway.toml
+#
+# Required: Postgres + Redis plugins, DATABASE_URL, REDIS_URL, SECRET_KEY,
+# SERVICE_API_KEY, API_CORS_ORIGINS. See docs/deploy.md.
+
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+
+[deploy]
+healthcheckPath = "/health"
+healthcheckTimeout = 60
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 5

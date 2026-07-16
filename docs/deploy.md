@@ -4,14 +4,20 @@ Target split:
 
 | Service | Platform | Root directory | Dockerfile |
 |---------|----------|----------------|------------|
-| Web (`apps/web`) | **Vercel** | `apps/web` | — (Next.js) |
-| API (`apps/api`) | **Railway** | **`.`** (repo root) | `apps/api/Dockerfile` |
-| AI runtime (`apps/ai-runtime`) | **Railway** | **`.`** (repo root) | `apps/ai-runtime/Dockerfile` |
+| Web (`apps/web`) | **Vercel** | **`apps/web`** | — (Next.js) |
+| **Backend** (API + AI runtime) | **Railway** | **`.`** (repo root) | **`Dockerfile`** |
 | Postgres + Redis | **Railway** plugins | — | — |
-| MCP server (optional) | **Railway** | `apps/mcp-server` | `Dockerfile` |
+| MCP server (optional) | Local / separate Railway | `apps/mcp-server` | `Dockerfile` |
 | Contracts | On-chain (Foundry) | `blockchain/` | — |
 
-> **API build tip:** Do **not** set Railway Root Directory to `apps/api`. The Dockerfile copies `apps/api/app`, so the build context must be the monorepo root. Wrong context causes: `"/app": not found`.
+The root **`Dockerfile`** runs **both**:
+
+1. **API** (`uvicorn` on `$PORT`) — tournaments, wallet, scout, room agent  
+2. **AI runtime** (`apps/ai-runtime`) — autonomous agent answers during cups  
+
+Skills/prompts are baked in (`/agent-skills`, `/agent-prompts`). Without the runtime process, cups stay empty of agent play.
+
+> **Build tip:** Root Directory must be the **repository root**. Wrong context causes missing `apps/…` COPY paths.
 
 ---
 
@@ -19,63 +25,50 @@ Target split:
 
 1. Create a Railway project (e.g. `arena64`).
 2. Add **PostgreSQL** and **Redis** plugins.
-3. Note the generated `DATABASE_URL` / `REDIS_URL` (or use variable references).
+3. Reference `DATABASE_URL` / `REDIS_URL` on the backend service.
 
-The API normalizes `postgres://` / `postgresql://` to `postgresql+asyncpg://` automatically. You do **not** need a separate `DATABASE_URL_SYNC` if you only set `DATABASE_URL`.
+The API normalizes `postgres://` / `postgresql://` to `postgresql+asyncpg://` automatically. You do **not** need `DATABASE_URL_SYNC` if you only set `DATABASE_URL`.
 
 ---
 
-## 2. Railway — API
+## 2. Railway — Backend (API + AI runtime)
 
 1. New service → Deploy from GitHub.
 2. Settings → Build:
    - **Root Directory** = empty / `.` (repository root)
-   - **Dockerfile path** = `apps/api/Dockerfile`
-   - Optional config path = `apps/api/railway.toml`
+   - **Dockerfile path** = `Dockerfile` (repo root — **not** `apps/api/Dockerfile`)
+   - Config file = `railway.toml`
 3. Variables (minimum):
 
 | Variable | Value |
 |----------|--------|
-| `DATABASE_URL` | Reference from Postgres (`${{Postgres.DATABASE_URL}}`) |
-| `REDIS_URL` | Reference from Redis |
+| `DATABASE_URL` | `${{Postgres.DATABASE_URL}}` |
+| `REDIS_URL` | Redis plugin URL |
 | `SECRET_KEY` | Long random secret |
-| `SERVICE_API_KEY` | Shared with AI runtime |
-| `API_CORS_ORIGINS` | `https://your-app.vercel.app` (comma-separated if multiple) |
+| `SERVICE_API_KEY` | Shared secret (runtime uses the same) |
+| `API_CORS_ORIGINS` | `https://your-app.vercel.app` |
 | `APP_ENV` | `production` |
-| `INJECTIVE_NETWORK` | `testnet` (until mainnet checklist) |
+| `INJECTIVE_NETWORK` | `testnet` |
 
-Optional product vars: `ARENA64_TREASURY_ADDRESS`, `ARENA64_TREASURY_PRIVATE_KEY`, `INJ_KEY_EVM`, `INJ_FAUCET_ADDRESS`, `QWEN_API_KEY` / `DASHSCOPE_API_KEY`, `AI_PROVIDER=qwen` (cloud) or `rules` (no LLM).
+Optional: `ARENA64_TREASURY_ADDRESS`, `ARENA64_TREASURY_PRIVATE_KEY`, `INJ_KEY_EVM`, `INJ_FAUCET_ADDRESS`, `QWEN_API_KEY` / `DASHSCOPE_API_KEY`, `AI_PROVIDER=qwen` or `rules`, `RUNTIME_LLM_ENABLED=true`, `RUNTIME_POLL_SECONDS=2.5`.
+
+`ARENA64_API_URL` defaults to `http://127.0.0.1:$PORT` inside the container (runtime → local API). Override only if you split services.
 
 4. Confirm `GET /health` returns `"status":"ok"`.
+5. Confirm runtime logs mention `Arena64 competition runtime` and skills loaded.
+
+### Advanced: split API and runtime
+
+Use `apps/api/Dockerfile` + `apps/ai-runtime/Dockerfile` as **two** Railway services. Set the runtime’s `ARENA64_API_URL` to the API’s public URL and the same `SERVICE_API_KEY`. Prefer the single root `Dockerfile` for hackathon deploys.
 
 ---
 
-## 3. Railway — AI runtime
-
-Cups need this worker; without it agents do not answer live challenges.
-
-1. New service → **Root Directory = `.`** (monorepo root).
-2. Dockerfile path: `apps/ai-runtime/Dockerfile` (see `apps/ai-runtime/railway.toml`).
-3. Variables:
-
-| Variable | Value |
-|----------|--------|
-| `ARENA64_API_URL` | Public Railway API URL, e.g. `https://….up.railway.app` |
-| `SERVICE_API_KEY` | **Same** as API |
-| `RUNTIME_POLL_SECONDS` | `2.5` |
-| `RUNTIME_LLM_ENABLED` | `true` if using Qwen/Ollama; else `false` |
-| `RUNTIME_WORKER_ID` | `0` |
-
-The image bakes in `packages/agent-skills` → `/agent-skills` and `packages/prompts` → `/agent-prompts`.
-
----
-
-## 4. Vercel — Web
+## 3. Vercel — Web
 
 ### Preferred setup (Root Directory)
 
 1. Import the repo in Vercel.
-2. **Settings → General → Root Directory → `apps/web`** (Edit → select `apps/web`).
+2. **Settings → General → Root Directory → `apps/web`**.
 3. Framework: **Next.js**.
 4. Environment variables — copy from `apps/web/.env.example`:
 
@@ -89,30 +82,26 @@ The image bakes in `packages/agent-skills` → `/agent-skills` and `packages/pro
 | `NEXT_PUBLIC_WALLETCONNECT_PROJECT_ID` | optional |
 
 5. Redeploy after setting env (Next inlines `NEXT_PUBLIC_*` at build time).
-6. Put the Vercel URL into Railway API `API_CORS_ORIGINS` and redeploy API if needed.
+6. Put the Vercel URL into Railway `API_CORS_ORIGINS` and redeploy the backend if needed.
 
 ### If you see: `No Next.js version detected`
 
-Vercel is building the **monorepo root** (root `package.json` has no app `src/`). Fix:
-
-1. Project → **Settings → General → Root Directory** → set to **`apps/web`**
+1. Project → **Settings → General → Root Directory** → **`apps/web`**
 2. Save → **Deployments → Redeploy**
-
-The repo also includes a root `vercel.json` fallback that builds `apps/web` when Root Directory is left empty, but **`apps/web` as Root Directory is still preferred**.
 
 ---
 
-## 5. Optional — MCP on Railway
+## 4. Optional — MCP
 
-Root Directory = `apps/mcp-server`. Set `ARENA64_API_URL` + `SERVICE_API_KEY`. Most demos run MCP locally against the deployed API instead.
+Run locally against the deployed API, or deploy `apps/mcp-server` separately. Not included in the root backend image (stdio sidecar).
 
 ---
 
 ## Checklist
 
 - [ ] Postgres + Redis on Railway
-- [ ] API `/health` green
-- [ ] AI runtime connected (`ARENA64_API_URL` + matching `SERVICE_API_KEY`)
+- [ ] Backend uses root **`Dockerfile`** (API + AI runtime)
+- [ ] `/health` green; runtime logs show skills
 - [ ] Vercel root = `apps/web` with production `NEXT_PUBLIC_*`
 - [ ] `API_CORS_ORIGINS` includes Vercel URL
 - [ ] Treasury / faucet keys set if testing deposits and INJ claims

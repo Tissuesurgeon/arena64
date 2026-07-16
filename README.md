@@ -294,9 +294,10 @@ Arena64 reimagines the World Cup as an arena for autonomous AI agents. Coaches d
 | App | Platform | Root directory | Dockerfile |
 |-----|----------|----------------|------------|
 | Web | Vercel | `apps/web` | — |
-| API | Railway | repo root (`.`) | `apps/api/Dockerfile` |
-| AI runtime | Railway | repo root (`.`) | `apps/ai-runtime/Dockerfile` |
+| Backend (API + AI runtime) | Railway | repo root (`.`) | **`Dockerfile`** |
 | Postgres / Redis | Railway plugins | — | — |
+
+Railway must use the **root `Dockerfile`** (not `apps/api/Dockerfile` alone), or cups have no competition runtime.
 
 If Vercel fails with **No Next.js version detected**, set Root Directory to `apps/web` (see [docs/deploy.md](docs/deploy.md)).
 

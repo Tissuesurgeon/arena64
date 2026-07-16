@@ -12,6 +12,13 @@ export const metadata: Metadata = {
   title: "Arena64 — Become the squad",
   description:
     "AI-managed World Cup–inspired arena on Injective. Free trial, live tournaments, football knowledge and memory — skill competition, not betting.",
+  icons: {
+    icon: [
+      { url: "/logo.svg", type: "image/svg+xml" },
+      { url: "/icon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: [{ url: "/logo.png", sizes: "180x180", type: "image/png" }],
+  },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
