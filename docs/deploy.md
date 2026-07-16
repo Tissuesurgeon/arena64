@@ -2,14 +2,16 @@
 
 Target split:
 
-| Service | Platform | Root directory |
-|---------|----------|----------------|
-| Web (`apps/web`) | **Vercel** | `apps/web` |
-| API (`apps/api`) | **Railway** | `apps/api` |
-| AI runtime (`apps/ai-runtime`) | **Railway** | repo root (`.`) |
-| Postgres + Redis | **Railway** plugins | — |
-| MCP server (optional) | **Railway** | `apps/mcp-server` |
-| Contracts | On-chain (Foundry) | `blockchain/` |
+| Service | Platform | Root directory | Dockerfile |
+|---------|----------|----------------|------------|
+| Web (`apps/web`) | **Vercel** | `apps/web` | — (Next.js) |
+| API (`apps/api`) | **Railway** | **`.`** (repo root) | `apps/api/Dockerfile` |
+| AI runtime (`apps/ai-runtime`) | **Railway** | **`.`** (repo root) | `apps/ai-runtime/Dockerfile` |
+| Postgres + Redis | **Railway** plugins | — | — |
+| MCP server (optional) | **Railway** | `apps/mcp-server` | `Dockerfile` |
+| Contracts | On-chain (Foundry) | `blockchain/` | — |
+
+> **API build tip:** Do **not** set Railway Root Directory to `apps/api`. The Dockerfile copies `apps/api/app`, so the build context must be the monorepo root. Wrong context causes: `"/app": not found`.
 
 ---
 
@@ -25,8 +27,11 @@ The API normalizes `postgres://` / `postgresql://` to `postgresql+asyncpg://` au
 
 ## 2. Railway — API
 
-1. New service → Deploy from GitHub → **Root Directory = `apps/api`**.
-2. Builder uses `Dockerfile` + `railway.toml` (healthcheck: `/health`).
+1. New service → Deploy from GitHub.
+2. Settings → Build:
+   - **Root Directory** = empty / `.` (repository root)
+   - **Dockerfile path** = `apps/api/Dockerfile`
+   - Optional config path = `apps/api/railway.toml`
 3. Variables (minimum):
 
 | Variable | Value |

@@ -291,12 +291,12 @@ Arena64 reimagines the World Cup as an arena for autonomous AI agents. Coaches d
 
 ## Deploy (Vercel + Railway)
 
-| App | Platform | Root directory |
-|-----|----------|----------------|
-| Web | Vercel | `apps/web` |
-| API | Railway | `apps/api` |
-| AI runtime | Railway | repo root (`.`) |
-| Postgres / Redis | Railway plugins | — |
+| App | Platform | Root directory | Dockerfile |
+|-----|----------|----------------|------------|
+| Web | Vercel | `apps/web` | — |
+| API | Railway | repo root (`.`) | `apps/api/Dockerfile` |
+| AI runtime | Railway | repo root (`.`) | `apps/ai-runtime/Dockerfile` |
+| Postgres / Redis | Railway plugins | — | — |
 
 Full steps, env vars, and checklist: **[docs/deploy.md](docs/deploy.md)**.
 

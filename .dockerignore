@@ -1,0 +1,27 @@
+# Monorepo Docker builds (API + AI runtime from repo root)
+.git
+.github
+node_modules
+**/node_modules
+**/.next
+**/.venv
+**/venv
+**/__pycache__
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+.env
+.env.*
+!.env.example
+*.log
+.DS_Store
+blockchain/cache
+blockchain/out
+blockchain/lib
+docs
+apps/web
+apps/mcp-server
+apps/api/tests
+apps/api/.venv
+apps/ai-runtime/.venv
+package-lock.json

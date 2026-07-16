@@ -1,5 +1,10 @@
 # Arena64 API — production image for Railway
-# Railway: set Root Directory to `apps/api`, Dockerfile path `Dockerfile`
+# Build from monorepo root (required — COPY paths are relative to context):
+#   docker build -f apps/api/Dockerfile .
+# Railway: Root Directory = . (repo root)
+#          Dockerfile path = apps/api/Dockerfile
+#          Config file (optional) = apps/api/railway.toml
+
 FROM python:3.12-slim AS base
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
@@ -15,10 +20,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt .
+COPY apps/api/requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY app ./app
+COPY apps/api/app ./app
 
 # Railway injects PORT; default 8000 for local docker runs
 ENV PORT=8000
