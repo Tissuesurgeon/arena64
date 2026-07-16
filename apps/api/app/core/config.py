@@ -5,12 +5,28 @@ from typing import List, Optional
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Always load monorepo root .env, then apps/api/.env (API cwd overrides)
-# config.py lives at apps/api/app/core/config.py
-_CONFIG_FILE = Path(__file__).resolve()
-_ROOT_ENV = _CONFIG_FILE.parents[4] / ".env"
-_API_ENV = _CONFIG_FILE.parents[2] / ".env"
-_ENV_FILES = tuple(str(p) for p in (_ROOT_ENV, _API_ENV) if p.is_file())
+# Load optional .env files when present (local monorepo). Railway injects env vars —
+# Docker image path is /app/app/core/config.py (shallow), so never index parents[N] blindly.
+def _discover_env_files() -> tuple[str, ...]:
+    """Prefer apps/api/.env then monorepo-root .env; skip missing paths safely."""
+    config_file = Path(__file__).resolve()
+    found: list[Path] = []
+    # Walk upward from app/core → … → filesystem root (stops early in containers)
+    for parent in config_file.parents:
+        candidate = parent / ".env"
+        if candidate.is_file() and candidate not in found:
+            found.append(candidate)
+        # Monorepo marker: stop once we pass the repo root that contains apps/api
+        if (parent / "apps" / "api").is_dir() and candidate.is_file():
+            break
+        if parent.parent == parent:
+            break
+    # pydantic-settings: later files override earlier — put deeper (api) last
+    found.sort(key=lambda p: len(p.parts))
+    return tuple(str(p) for p in found)
+
+
+_ENV_FILES = _discover_env_files()
 
 
 def normalize_async_database_url(url: str) -> str:
@@ -35,7 +51,8 @@ def normalize_sync_database_url(url: str) -> str:
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=_ENV_FILES or ".env",
+        # Empty tuple in Docker/Railway (env vars only); local may load .env files
+        env_file=_ENV_FILES if _ENV_FILES else None,
         env_file_encoding="utf-8",
         extra="ignore",
         populate_by_name=True,
