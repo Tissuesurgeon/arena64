@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, ReactNode, useEffect, useState } from "react";
 import { api, type Agent, type StrategyProfile } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 
@@ -72,7 +72,7 @@ const CONSERVATION_OPTIONS = [
 ] as const;
 
 const selectClass =
-  "mt-2 w-full appearance-none border border-[var(--turf-line)] bg-[var(--night-sky)] px-4 py-3 text-[var(--floodlight)] outline-none transition focus:border-[var(--trophy-gold)]/60 disabled:opacity-40";
+  "w-full cursor-pointer appearance-none border border-[var(--turf-line)] bg-[var(--night-sky)] py-3 pl-4 pr-12 text-[var(--floodlight)] outline-none transition focus:border-[var(--trophy-gold)]/60 disabled:cursor-not-allowed disabled:opacity-40";
 
 function nearestOption<T extends number>(value: number, options: readonly { value: T }[]): T {
   let best = options[0].value;
@@ -85,6 +85,46 @@ function nearestOption<T extends number>(value: number, options: readonly { valu
     }
   }
   return best;
+}
+
+function DropdownField({
+  label,
+  hint,
+  disabled,
+  children,
+}: {
+  label: string;
+  hint?: string;
+  disabled?: boolean;
+  children: ReactNode;
+}) {
+  return (
+    <label className="block">
+      <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
+        {label}
+      </span>
+      <div className={`relative mt-2 ${disabled ? "opacity-40" : ""}`}>
+        {children}
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-y-0 right-0 flex w-12 items-center justify-center text-[var(--trophy-gold)]"
+        >
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none" className="opacity-90">
+            <path
+              d="M3.5 6L8 10.5L12.5 6"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </span>
+      </div>
+      {hint ? (
+        <span className="mt-1 block text-xs text-[var(--floodlight)]/50">{hint}</span>
+      ) : null}
+    </label>
+  );
 }
 
 export default function StrategyPage() {
@@ -168,8 +208,8 @@ export default function StrategyPage() {
       <p className="text-xs uppercase tracking-[0.35em] text-[var(--trophy-gold)]">Tactics board</p>
       <h1 className="led-title mt-2 text-5xl">Strategy profile</h1>
       <p className="mt-4 text-[var(--floodlight)]/65">
-        Controls how your agent spends time, MCP research, and x402 premium budget. Locked when a
-        tournament kicks off.
+        Choose each setting from the menu. Controls how your agent spends time, MCP research, and
+        x402 premium budget. Locked when a tournament kicks off.
       </p>
 
       {locked && (
@@ -179,10 +219,11 @@ export default function StrategyPage() {
       )}
 
       <form onSubmit={save} className="mt-10 space-y-8">
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Confidence threshold
-          </span>
+        <DropdownField
+          label="Confidence threshold"
+          hint="Below this, the agent may seek MCP / premium help."
+          disabled={locked}
+        >
           <select
             disabled={locked}
             value={form.confidence_threshold}
@@ -197,15 +238,9 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-          <span className="mt-1 block text-xs text-[var(--floodlight)]/50">
-            Below this, the agent may seek MCP / premium help.
-          </span>
-        </label>
+        </DropdownField>
 
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Thinking time
-          </span>
+        <DropdownField label="Thinking time" disabled={locked}>
           <select
             disabled={locked}
             value={form.thinking_time_ms}
@@ -218,12 +253,9 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-        </label>
+        </DropdownField>
 
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Risk level
-          </span>
+        <DropdownField label="Risk level" disabled={locked}>
           <select
             disabled={locked}
             value={form.risk_level}
@@ -238,12 +270,9 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-        </label>
+        </DropdownField>
 
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Max MCP calls / tournament
-          </span>
+        <DropdownField label="Max MCP calls / tournament" disabled={locked}>
           <select
             disabled={locked}
             value={form.max_mcp_calls}
@@ -256,12 +285,9 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-        </label>
+        </DropdownField>
 
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Premium insight budget (x402)
-          </span>
+        <DropdownField label="Premium insight budget (x402)" disabled={locked}>
           <select
             disabled={locked}
             value={form.premium_insight_budget}
@@ -276,12 +302,9 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-        </label>
+        </DropdownField>
 
-        <label className="block">
-          <span className="text-[10px] uppercase tracking-widest text-[var(--floodlight)]/45">
-            Resource conservation
-          </span>
+        <DropdownField label="Resource conservation" disabled={locked}>
           <select
             disabled={locked}
             value={form.resource_conservation}
@@ -296,7 +319,7 @@ export default function StrategyPage() {
               </option>
             ))}
           </select>
-        </label>
+        </DropdownField>
 
         <div className="flex flex-wrap gap-3">
           <button
