@@ -9,6 +9,7 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { getAddress } from "viem";
 import { useAccount, useDisconnect, useSignMessage, useSwitchChain } from "wagmi";
 import { api, demoLogin, getStoredUser, logout as clearSession, type User } from "@/lib/api";
 import { INJECTIVE_CHAIN_ID } from "@/lib/chain";
@@ -64,21 +65,39 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!raw) {
           throw new Error("Connect a wallet first");
         }
+
+        // Prefer checksummed account for wagmi/MetaMask; API stores lowercase
+        let account: `0x${string}`;
+        try {
+          account = getAddress(raw);
+        } catch {
+          throw new Error("Invalid wallet address");
+        }
+        const wallet = account.toLowerCase();
+
         if (chainId != null && chainId !== INJECTIVE_CHAIN_ID) {
           try {
             await switchChainAsync({ chainId: INJECTIVE_CHAIN_ID });
           } catch {
             throw new Error(
-              `Switch to Injective EVM (chain ${INJECTIVE_CHAIN_ID}) in your wallet, then try again.`
+              `Switch MetaMask to Injective EVM Testnet (chain ${INJECTIVE_CHAIN_ID}), then tap Sign in again.`
             );
           }
         }
 
-        const wallet = raw.toLowerCase();
         const nonce = await api<{ message: string; nonce: string }>(
           `/api/auth/nonce?wallet_address=${encodeURIComponent(wallet)}`
         );
-        const signature = await signMessageAsync({ message: nonce.message, account: wallet as `0x${string}` });
+        let signature: string;
+        try {
+          signature = await signMessageAsync({ message: nonce.message, account });
+        } catch (signErr: unknown) {
+          const s = signErr instanceof Error ? signErr.message : String(signErr);
+          if (/reject|denied|cancel/i.test(s)) {
+            throw new Error("Signature rejected in MetaMask — approve the Arena64 login message to sign in.");
+          }
+          throw new Error(s || "MetaMask signature failed");
+        }
         const data = await api<{ access_token: string; user: User }>("/api/auth/login", {
           method: "POST",
           body: JSON.stringify({

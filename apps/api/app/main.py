@@ -34,22 +34,22 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# Never combine allow_origins=["*"] with allow_credentials=True — browsers block the response
-# (breaks Vercel → Railway wallet login). Mirror configured origins + Vercel preview hosts.
+# JWT auth uses Authorization headers (not cookies). Use wildcard origins with
+# allow_credentials=False — the previous "*" + credentials=True combo is rejected
+# by browsers and blocked MetaMask login from Vercel.
 _cors_origins = list(settings.cors_origins)
-if settings.app_env == "development":
-    for _o in (
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ):
-        if _o not in _cors_origins:
-            _cors_origins.append(_o)
+for _o in ("http://localhost:3000", "http://127.0.0.1:3000"):
+    if _o not in _cors_origins:
+        _cors_origins.append(_o)
+# Always allow any origin for this public API (Bearer tokens only).
+if "*" not in _cors_origins:
+    _cors_origins.append("*")
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_cors_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
+    allow_origin_regex=r"https://.*\.(vercel\.app|railway\.app)",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )

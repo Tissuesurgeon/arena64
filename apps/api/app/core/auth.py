@@ -25,8 +25,12 @@ def create_access_token(user_id: str, wallet: str) -> str:
 
 
 def verify_wallet_signature(wallet: str, message: str, signature: str) -> bool:
+    """Verify EIP-191 personal_sign (MetaMask / wagmi signMessage)."""
     try:
-        recovered = Account.recover_message(encode_defunct(text=message), signature=signature)
+        sig = signature.strip()
+        if not sig.startswith("0x"):
+            sig = "0x" + sig
+        recovered = Account.recover_message(encode_defunct(text=message), signature=sig)
         return recovered.lower() == wallet.lower()
     except Exception:
         return False

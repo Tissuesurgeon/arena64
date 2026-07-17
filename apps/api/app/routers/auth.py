@@ -1,3 +1,4 @@
+import asyncio
 import secrets
 from datetime import datetime
 
@@ -12,7 +13,7 @@ from app.services.wallet_service import wallet_service
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
-# Fallback when Redis is unavailable (single-process / local)
+# Primary store for this process — Redis is best-effort sync for multi-instance
 _nonces: dict[str, str] = {}
 _NONCE_TTL_SECONDS = 600
 _NONCE_KEY = "arena64:auth:nonce:{wallet}"
@@ -40,14 +41,28 @@ def _user_out(user) -> UserOut:
 
 async def _store_nonce(wallet: str, message: str) -> None:
     _nonces[wallet] = message
-    await cache_set(_NONCE_KEY.format(wallet=wallet), message, ttl=_NONCE_TTL_SECONDS)
+    # Never block login on Redis (bad REDIS_URL = hang)
+    try:
+        await asyncio.wait_for(
+            cache_set(_NONCE_KEY.format(wallet=wallet), message, ttl=_NONCE_TTL_SECONDS),
+            timeout=2.0,
+        )
+    except Exception:
+        pass
 
 
 async def _load_nonce(wallet: str) -> str | None:
-    cached = await cache_get(_NONCE_KEY.format(wallet=wallet))
-    if cached:
-        return cached
-    return _nonces.get(wallet)
+    local = _nonces.get(wallet)
+    try:
+        cached = await asyncio.wait_for(
+            cache_get(_NONCE_KEY.format(wallet=wallet)),
+            timeout=2.0,
+        )
+        if cached:
+            return cached
+    except Exception:
+        pass
+    return local
 
 
 async def _clear_nonce(wallet: str) -> None:
@@ -55,8 +70,8 @@ async def _clear_nonce(wallet: str) -> None:
     try:
         from app.core.redis_client import get_redis
 
-        r = await get_redis()
-        await r.delete(_NONCE_KEY.format(wallet=wallet))
+        r = await asyncio.wait_for(get_redis(), timeout=1.0)
+        await asyncio.wait_for(r.delete(_NONCE_KEY.format(wallet=wallet)), timeout=1.0)
     except Exception:
         pass
 

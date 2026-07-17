@@ -181,7 +181,7 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
             <div className="space-y-2">
               <p className="text-xs text-[var(--floodlight)]/70">
                 {address?.slice(0, 6)}…{address?.slice(-4)}
-                {wrongChain ? " · wrong network" : ""}
+                {wrongChain ? " · wrong network — switch to Injective 1439" : " · connected — sign to finish"}
               </p>
               <button
                 type="button"
@@ -189,7 +189,7 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
                 disabled={busy}
                 className="w-full bg-[var(--trophy-gold)] px-3 py-2 text-sm font-semibold text-[var(--night-sky)]"
               >
-                Sign Arena64 login
+                {busy ? "Signing…" : "Sign Arena64 login"}
               </button>
               <button
                 type="button"

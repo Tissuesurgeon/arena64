@@ -50,7 +50,8 @@ The API normalizes `postgres://` / `postgresql://` to `postgresql+asyncpg://` au
 | `APP_ENV` | `production` |
 | `INJECTIVE_NETWORK` | `testnet` |
 
-> **Sign-in / CORS:** The API allows `https://*.vercel.app` automatically. Still set `API_CORS_ORIGINS` to your production Vercel URL. Do **not** use `*` with credentials — that blocks browser login.
+> **Sign-in:** CORS allows all origins with `allow_credentials=False` (JWT in `Authorization`, not cookies).
+> **Redis:** Attach a Railway Redis plugin and set `REDIS_URL`. If Redis is wrong/missing, auth still works via in-memory nonces (single instance) and will no longer hang.
 
 Optional: `ARENA64_TREASURY_ADDRESS`, `ARENA64_TREASURY_PRIVATE_KEY`, `INJ_KEY_EVM`, `INJ_FAUCET_ADDRESS`, `QWEN_API_KEY` / `DASHSCOPE_API_KEY`, `AI_PROVIDER=qwen` or `rules`, `RUNTIME_LLM_ENABLED=true`, `RUNTIME_POLL_SECONDS=2.5`.
 
