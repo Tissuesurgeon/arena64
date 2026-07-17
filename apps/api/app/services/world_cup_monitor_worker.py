@@ -28,8 +28,9 @@ async def run_world_cup_monitor_once(*, auto_approve: bool | None = None) -> dic
 
 
 async def _scheduler_loop() -> None:
-    # Stagger after scout bootstrap so we don't stampede free search
-    await asyncio.sleep(45)
+    settings = get_settings()
+    # First pass soon after boot so Current stats are not stuck on a stale snapshot
+    await asyncio.sleep(20)
     while True:
         settings = get_settings()
         if settings.world_cup_monitor_enabled:

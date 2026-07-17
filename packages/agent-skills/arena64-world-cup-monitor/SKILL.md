@@ -22,7 +22,7 @@ Continuously watch the open internet for FIFA World Cup 2026 news, then refresh:
 ## Config
 ```bash
 WORLD_CUP_MONITOR_ENABLED=true
-WORLD_CUP_MONITOR_INTERVAL_MINUTES=30
+WORLD_CUP_MONITOR_INTERVAL_MINUTES=15
 # Reuses scout allowlist + LLM settings
 SCOUT_ALLOWED_HOSTS=...
 AI_PROVIDER=auto

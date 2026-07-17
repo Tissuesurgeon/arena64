@@ -47,6 +47,8 @@ DEFAULT_FOOTBALL_HOSTS = [
     "marca.com",
     "www.mlssoccer.com",
     "mlssoccer.com",
+    "sports.yahoo.com",
+    "yahoo.com",
     "www.uefa.com",
     "uefa.com",
     "www.flashscore.com",
@@ -60,6 +62,8 @@ DEFAULT_FOOTBALL_HOSTS = [
 # Used only if search returns nothing (still football platforms, never Wikipedia).
 FALLBACK_SEED_URLS = [
     "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026",
+    "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/spain-v-argentina-live-stream-team-news-tickets-and-more",
+    "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/france-spain-match-report-highlights",
     "https://www.fifa.com/en/tournaments/mens/worldcup",
     "https://www.espn.com/soccer/league/_/name/fifa.world",
     "https://www.bbc.com/sport/football/world-cup",
@@ -69,14 +73,14 @@ FALLBACK_SEED_URLS = [
 ]
 
 DEFAULT_SEARCH_QUERIES = [
-    "FIFA World Cup 2026 semi-finals results",
-    "FIFA World Cup 2026 Golden Boot standings",
-    "World Cup 2026 France Spain England Argentina",
+    "FIFA World Cup 2026 Final Spain Argentina",
+    "FIFA World Cup 2026 Golden Boot Messi Mbappe",
+    "World Cup 2026 England France third place playoff",
+    "FIFA World Cup 2026 Spain France semi-final",
+    "World Cup 2026 Argentina England semi-final",
     "FIFA World Cup 2026 hosts Canada Mexico USA fun facts",
     "World Cup 2026 Round of 32 format 48 teams",
-    "FIFA World Cup 2026 Final New York New Jersey Stadium",
-    "World Cup 2026 Mbappé Messi Haaland goals",
-    "FIFA World Cup 2026 quarter-final results",
+    "FIFA World Cup 2026 latest results news",
 ]
 
 BLOCKED_HOST_FRAGMENTS = ("wikipedia.org", "wikimedia.org", "wikiwand.com")

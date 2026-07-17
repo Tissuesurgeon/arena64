@@ -1,20 +1,22 @@
 {
   "edition": "FIFA World Cup 2026™",
   "hosts": ["Canada", "Mexico", "United States"],
-  "updated_at": "2026-07-13",
-  "stage": "Semi-finals approach",
-  "stage_code": "SEMI_FINAL",
+  "updated_at": "2026-07-17",
+  "stage": "Final weekend — Spain vs Argentina",
+  "stage_code": "FINAL",
   "final_date": "2026-07-19",
   "final_venue": "New York New Jersey Stadium",
-  "headline": "Knockout drama continues — France and Spain booked for Dallas; England await Argentina or Switzerland.",
+  "headline": "Final set: Spain face Argentina on 19 July at New York New Jersey Stadium after Spain beat France 2–0 and Argentina came from behind 2–1 vs England.",
   "snapshot": {
     "teams": 48,
-    "matches_played_est": 96,
-    "goals_est": 280,
+    "matches_played_est": 102,
+    "goals_est": 300,
     "avg_goals_per_match": 2.9,
     "host_cities": 16,
     "format": "48 teams · 12 groups of 4 · Round of 32 → Round of 16 → Quarter-finals → Semi-finals → Final",
-    "opening_match_note": "First finals with three host nations and a Round of 32 knockout round"
+    "opening_match_note": "First finals with three host nations and a Round of 32 knockout round",
+    "finalists": "Spain vs Argentina",
+    "third_place": "England vs France"
   },
   "format_facts": {
     "teams": 48,
@@ -31,51 +33,57 @@
     {
       "nation": "Canada",
       "role": "Co-host",
-      "note": "First time Canada hosts men's World Cup matches"
+      "note": "First time Canada hosts men's World Cup matches — exited Round of 16 to Morocco"
     },
     {
       "nation": "Mexico",
       "role": "Co-host",
-      "note": "Mexico becomes the first nation to host World Cup matches in three different editions (1970, 1986, 2026)"
+      "note": "Mexico becomes the first nation to host World Cup matches in three different editions (1970, 1986, 2026) — exited Round of 16 to England"
     },
     {
       "nation": "United States",
       "role": "Co-host",
-      "note": "Final staged in the New York New Jersey metro area"
+      "note": "Final staged at New York New Jersey Stadium (MetLife) — USMNT exited Round of 16 to Belgium"
     }
   ],
   "upcoming": [
     {
-      "round": "Semi-final",
-      "date": "2026-07-14",
-      "fixture": "France vs Spain",
-      "venue": "Dallas Stadium"
-    },
-    {
-      "round": "Semi-final",
-      "date": "2026-07-15",
-      "fixture": "England vs Argentina / Switzerland",
-      "venue": "Atlanta Stadium"
-    },
-    {
       "round": "Third-place",
       "date": "2026-07-18",
-      "fixture": "SF runners-up",
+      "fixture": "England vs France",
       "venue": "Miami Stadium"
     },
     {
       "round": "Final",
       "date": "2026-07-19",
-      "fixture": "SF winners",
+      "fixture": "Spain vs Argentina",
       "venue": "New York New Jersey Stadium"
     }
   ],
   "recent_results": [
     {
+      "round": "Semi-final",
+      "date": "2026-07-15",
+      "fixture": "England 1–2 Argentina",
+      "venue": "Atlanta Stadium"
+    },
+    {
+      "round": "Semi-final",
+      "date": "2026-07-14",
+      "fixture": "France 0–2 Spain",
+      "venue": "Dallas Stadium"
+    },
+    {
       "round": "Quarter-final",
-      "date": "2026-07-09",
-      "fixture": "France 2–0 Morocco",
-      "venue": "Boston Stadium"
+      "date": "2026-07-11",
+      "fixture": "Argentina 3–1 Switzerland (a.e.t.)",
+      "venue": "—"
+    },
+    {
+      "round": "Quarter-final",
+      "date": "2026-07-11",
+      "fixture": "England 2–1 Norway (a.e.t.)",
+      "venue": "Miami Stadium"
     },
     {
       "round": "Quarter-final",
@@ -85,31 +93,19 @@
     },
     {
       "round": "Quarter-final",
-      "date": "2026-07-11",
-      "fixture": "Norway 1–2 England",
-      "venue": "Miami Stadium"
-    },
-    {
-      "round": "Round of 16",
-      "date": "2026-07-05",
-      "fixture": "Paraguay 0–1 France",
-      "venue": "Philadelphia Stadium"
-    },
-    {
-      "round": "Round of 16",
-      "date": "2026-07-05",
-      "fixture": "Canada 0–3 Morocco",
-      "venue": "Houston Stadium"
+      "date": "2026-07-09",
+      "fixture": "France 2–0 Morocco",
+      "venue": "Boston Stadium"
     }
   ],
   "golden_boot": [
-    { "rank": 1, "player": "Kylian Mbappé", "team": "France", "goals": 8, "assists": 3 },
-    { "rank": 2, "player": "Lionel Messi", "team": "Argentina", "goals": 8, "assists": 1 },
+    { "rank": 1, "player": "Lionel Messi", "team": "Argentina", "goals": 8, "assists": 4 },
+    { "rank": 2, "player": "Kylian Mbappé", "team": "France", "goals": 8, "assists": 3 },
     { "rank": 3, "player": "Erling Haaland", "team": "Norway", "goals": 7, "assists": 0 },
-    { "rank": 4, "player": "Harry Kane", "team": "England", "goals": 6, "assists": 1 },
-    { "rank": 5, "player": "Ousmane Dembélé", "team": "France", "goals": 5, "assists": 2 },
-    { "rank": 6, "player": "Jude Bellingham", "team": "England", "goals": 5, "assists": 1 },
-    { "rank": 7, "player": "Mikel Oyarzabal", "team": "Spain", "goals": 4, "assists": 1 },
+    { "rank": 4, "player": "Jude Bellingham", "team": "England", "goals": 6, "assists": 2 },
+    { "rank": 5, "player": "Harry Kane", "team": "England", "goals": 6, "assists": 1 },
+    { "rank": 6, "player": "Ousmane Dembélé", "team": "France", "goals": 5, "assists": 2 },
+    { "rank": 7, "player": "Mikel Oyarzabal", "team": "Spain", "goals": 5, "assists": 1 },
     { "rank": 8, "player": "Vinícius Jr.", "team": "Brazil", "goals": 4, "assists": 1 }
   ],
   "fun_facts": [
@@ -138,70 +134,64 @@
       "tags": ["format", "knockout", "2026"]
     },
     {
+      "id": "final-spain-argentina",
+      "title": "Finalists locked in",
+      "fact": "Spain and Argentina will contest the 2026 World Cup Final on 19 July at New York New Jersey Stadium.",
+      "tags": ["final", "spain", "argentina", "2026"]
+    },
+    {
+      "id": "sf-spain-france",
+      "title": "Spain outplay France",
+      "fact": "Spain beat France 2–0 in the semi-final at Dallas Stadium (Oyarzabal pen, Porro) to reach the 2026 Final.",
+      "tags": ["semi-final", "spain", "france", "2026"]
+    },
+    {
+      "id": "sf-argentina-england",
+      "title": "Argentina stun England",
+      "fact": "Argentina came from behind to beat England 2–1 in Atlanta — Enzo Fernández equalised late and Lautaro Martínez headed the stoppage-time winner.",
+      "tags": ["semi-final", "argentina", "england", "2026"]
+    },
+    {
+      "id": "hosts-r16-exit",
+      "title": "All three hosts exit R16",
+      "fact": "Canada, Mexico, and the United States were all eliminated in the Round of 16 (to Morocco, England, and Belgium respectively).",
+      "tags": ["hosts", "round-of-16", "2026"]
+    },
+    {
+      "id": "golden-boot-messi-leads",
+      "title": "Messi leads Golden Boot",
+      "fact": "Lionel Messi leads the Golden Boot on assists tiebreaker — 8 goals and 4 assists vs Mbappé's 8 goals and 3 assists — heading into the Final.",
+      "tags": ["golden-boot", "messi", "mbappe", "2026"]
+    },
+    {
+      "id": "third-place-miami",
+      "title": "Bronze in Miami",
+      "fact": "England face France in the third-place match on 18 July at Miami Stadium.",
+      "tags": ["third-place", "england", "france", "2026"]
+    },
+    {
+      "id": "argentina-back-to-back",
+      "title": "Holders chase history",
+      "fact": "Argentina are aiming for back-to-back World Cup titles after Qatar 2022, facing Spain in the 2026 Final.",
+      "tags": ["final", "argentina", "2026"]
+    },
+    {
+      "id": "spain-second-title",
+      "title": "Spain seek a second star",
+      "fact": "Spain return to a World Cup Final for the first time since winning in 2010, after dominating France in the 2026 semi-final.",
+      "tags": ["final", "spain", "2026"]
+    },
+    {
       "id": "final-nynj",
       "title": "Final venue",
-      "fact": "The 2026 World Cup Final is scheduled for 19 July 2026 at New York New Jersey Stadium.",
+      "fact": "The 2026 World Cup Final is at New York New Jersey Stadium (MetLife Stadium, East Rutherford) on 19 July 2026.",
       "tags": ["final", "venues", "2026"]
-    },
-    {
-      "id": "sf-france-spain",
-      "title": "Semi-final: France vs Spain",
-      "fact": "France meet Spain in a 2026 World Cup semi-final on 14 July at Dallas Stadium.",
-      "tags": ["semi-final", "france", "spain", "2026"]
-    },
-    {
-      "id": "sf-england-path",
-      "title": "England's semi path",
-      "fact": "England reach a 2026 semi-final in Atlanta after beating Norway 2–1 in the quarter-finals; their opponent is Argentina or Switzerland.",
-      "tags": ["semi-final", "england", "2026"]
-    },
-    {
-      "id": "qf-france-morocco",
-      "title": "France edge Morocco",
-      "fact": "France beat Morocco 2–0 in a 2026 quarter-final at Boston Stadium.",
-      "tags": ["quarter-final", "france", "morocco", "2026"]
-    },
-    {
-      "id": "qf-spain-belgium",
-      "title": "Spain past Belgium",
-      "fact": "Spain defeated Belgium 2–1 in the 2026 quarter-finals at Los Angeles Stadium.",
-      "tags": ["quarter-final", "spain", "belgium", "2026"]
-    },
-    {
-      "id": "qf-england-norway",
-      "title": "England past Haaland's Norway",
-      "fact": "England beat Norway 2–1 in a 2026 quarter-final at Miami Stadium despite Erling Haaland's seven-goal Golden Boot chase.",
-      "tags": ["quarter-final", "england", "norway", "2026"]
-    },
-    {
-      "id": "r16-canada",
-      "title": "Host Canada exit",
-      "fact": "Co-host Canada were eliminated 0–3 by Morocco in the Round of 16 at Houston Stadium.",
-      "tags": ["round-of-16", "canada", "morocco", "2026"]
-    },
-    {
-      "id": "golden-boot-tie",
-      "title": "Golden Boot deadlock",
-      "fact": "As of mid-July 2026, Kylian Mbappé and Lionel Messi are level on 8 goals for the Golden Boot; Mbappé leads on assists (3 vs 1).",
-      "tags": ["golden-boot", "mbappe", "messi", "2026"]
     },
     {
       "id": "haaland-7",
       "title": "Haaland on seven",
-      "fact": "Erling Haaland has 7 goals for Norway at World Cup 2026, third in the Golden Boot race behind Mbappé and Messi.",
+      "fact": "Erling Haaland finished with 7 goals for Norway, third in the Golden Boot race after Norway’s quarter-final exit.",
       "tags": ["golden-boot", "haaland", "norway", "2026"]
-    },
-    {
-      "id": "kane-6",
-      "title": "Kane among the scorers",
-      "fact": "Harry Kane has 6 goals for England at World Cup 2026, fourth in the Golden Boot standings.",
-      "tags": ["golden-boot", "kane", "england", "2026"]
-    },
-    {
-      "id": "goals-average",
-      "title": "Goals flowing",
-      "fact": "Through the knockout path into the semis, World Cup 2026 is averaging about 2.9 goals per match across an estimated 280 tournament goals.",
-      "tags": ["stats", "2026"]
     },
     {
       "id": "host-cities-16",
@@ -210,55 +200,39 @@
       "tags": ["venues", "hosts", "2026"]
     },
     {
-      "id": "surviving-powers",
-      "title": "Classic powers return",
-      "fact": "By the semi-final stage of 2026, the remaining paths feature traditional powers France, Spain, and England, with Argentina or Switzerland still alive on the other side of the bracket.",
-      "tags": ["semi-final", "2026"]
-    },
-    {
-      "id": "dembele-bellingham",
-      "title": "Creators on five",
-      "fact": "Ousmane Dembélé and Jude Bellingham each have 5 goals at World Cup 2026, tied fifth in the Golden Boot race.",
-      "tags": ["golden-boot", "france", "england", "2026"]
-    },
-    {
-      "id": "third-place-miami",
-      "title": "Bronze in Miami",
-      "fact": "The 2026 third-place match is scheduled for 18 July at Miami Stadium between the semi-final runners-up.",
-      "tags": ["venues", "2026"]
-    },
-    {
-      "id": "first-48-narrative",
-      "title": "Business end of a new format",
-      "fact": "The expanded 48-team World Cup reached the business end with hosts still relevant early, then classic European and South American powers taking over the semi-final picture.",
-      "tags": ["story", "2026"]
+      "id": "goals-average",
+      "title": "Goals flowing",
+      "fact": "World Cup 2026 has remained high-scoring through the knockouts, averaging about 2.9 goals per match into the final weekend.",
+      "tags": ["stats", "2026"]
     }
   ],
   "tournament_so_far": {
-    "story": "The expanded 48-team World Cup reached the business end with hosts still in the conversation early, then classic powers taking over. France and Spain meet in one semi; England’s path depends on Argentina’s quarter-final against Switzerland.",
+    "story": "The first 48-team World Cup reached its final weekend with Spain and Argentina booked for New York New Jersey Stadium. Spain controlled France 2–0 in Dallas; Argentina produced another late turnaround to beat England 2–1 in Atlanta. All three co-hosts exited in the Round of 16. Messi leads the Golden Boot on assists with the Final and bronze-medal match still to come.",
     "highlights": [
-      "First 48-team finals — 12 groups, new Round of 32 round",
-      "Tri-nation hosts: Canada, Mexico, United States",
-      "Golden Boot race tight: Mbappé and Messi level on 8 goals (assists separate them)",
-      "Final set for 19 July at New York New Jersey Stadium",
-      "Mexico becomes first nation to host World Cup matches in three editions",
-      "Co-host Canada exited in the Round of 16 to Morocco"
+      "Final: Spain vs Argentina — 19 July, New York New Jersey Stadium",
+      "Third place: England vs France — 18 July, Miami Stadium",
+      "Spain 2–0 France (SF) — Oyarzabal, Porro",
+      "Argentina 2–1 England (SF) — Fernández, Martínez late comeback",
+      "All three hosts (Canada, Mexico, USA) exited Round of 16",
+      "Messi leads Golden Boot 8G/4A over Mbappé 8G/3A"
     ],
     "by_the_numbers": [
       { "label": "Teams at kickoff", "value": "48" },
       { "label": "Groups", "value": "12" },
       { "label": "Host cities", "value": "16" },
-      { "label": "Current stage", "value": "Semi-finals" },
-      { "label": "Days to Final", "value": "6" },
-      { "label": "Golden Boot lead", "value": "8 goals" },
-      { "label": "Est. goals scored", "value": "280" },
+      { "label": "Current stage", "value": "Final" },
+      { "label": "Finalists", "value": "ESP · ARG" },
+      { "label": "Golden Boot lead", "value": "Messi 8G 4A" },
+      { "label": "Est. goals scored", "value": "300" },
       { "label": "Avg goals / match", "value": "2.9" }
     ],
-    "surviving": ["France", "Spain", "England", "Argentina / Switzerland"]
+    "surviving": ["Spain", "Argentina"]
   },
   "sources": [
     "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026",
-    "FIFA knockout bracket & Golden Boot coverage (July 2026)"
+    "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/spain-v-argentina-live-stream-team-news-tickets-and-more",
+    "https://www.fifa.com/en/tournaments/mens/worldcup/canadamexicousa2026/articles/france-spain-match-report-highlights",
+    "FIFA / Sky Sports / Yahoo Sports coverage (July 2026)"
   ],
-  "disclaimer": "Arena64 snapshot for agent knowledge & coaches — not an official FIFA feed. Figures approximate as of the listed update date."
+  "disclaimer": "Arena64 snapshot for agent knowledge & coaches — refreshed by the World Cup Monitor from open-web football coverage. Not an official FIFA live feed."
 }

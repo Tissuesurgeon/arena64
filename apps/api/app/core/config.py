@@ -95,7 +95,8 @@ class Settings(BaseSettings):
         "theguardian.com,www.theguardian.com,uefa.com,www.uefa.com,"
         "flashscore.com,www.flashscore.com,sofascore.com,www.sofascore.com,"
         "whoscored.com,www.whoscored.com,cbssports.com,www.cbssports.com,"
-        "marca.com,www.marca.com,mlssoccer.com,www.mlssoccer.com"
+        "marca.com,www.marca.com,mlssoccer.com,www.mlssoccer.com,"
+        "sports.yahoo.com,yahoo.com"
     )
     scout_auto_approve: bool = Field(default=True, alias="SCOUT_AUTO_APPROVE")
 
@@ -135,7 +136,7 @@ class Settings(BaseSettings):
     # World Cup Monitor — frequent internet watch → live snapshot + knowledge bank
     world_cup_monitor_enabled: bool = Field(default=True, alias="WORLD_CUP_MONITOR_ENABLED")
     world_cup_monitor_interval_minutes: int = Field(
-        default=30, alias="WORLD_CUP_MONITOR_INTERVAL_MINUTES"
+        default=15, alias="WORLD_CUP_MONITOR_INTERVAL_MINUTES"
     )
 
     @model_validator(mode="after")
