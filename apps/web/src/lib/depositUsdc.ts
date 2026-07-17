@@ -1,4 +1,10 @@
-import type { Address, Hex, PublicClient, WalletClient } from "viem";
+import {
+  encodeFunctionData,
+  type Address,
+  type Hex,
+  type PublicClient,
+  type WalletClient,
+} from "viem";
 import { INJECTIVE_CHAIN_ID, injectiveEvm } from "@/lib/chain";
 
 /** Minimal ERC-20 ABI for USDC transfer + balance. */
@@ -22,12 +28,18 @@ export const USDC_ERC20_ABI = [
   },
 ] as const;
 
-/** Injective USDC EVM compliance hook needs far more gas than a plain ERC-20 transfer. */
-const USDC_GAS_FLOOR = BigInt(500_000);
-const USDC_GAS_FALLBACK = BigInt(1_000_000);
+/**
+ * Injective USDC (MTS) runs a compliance EVM hook on every transfer.
+ * Under-gassing surfaces as "transfer is restricted by EVM hook / ErrorOutOfGas"
+ * even when the transfer is allowed — use a high explicit gas limit.
+ * @see https://docs.injective.network/developers-defi/usdc-stablecoin
+ */
+const USDC_GAS_FLOOR = BigInt(2_000_000);
+const USDC_GAS_FALLBACK = BigInt(3_000_000);
 const RECEIPT_TIMEOUT_MS = 90_000;
 
 export const INJECTIVE_TESTNET_FAUCET = "https://testnet.faucet.injective.network";
+export const CIRCLE_FAUCET = "https://faucet.circle.com/";
 
 export type SendUsdcDepositParams = {
   publicClient: PublicClient;
@@ -52,8 +64,8 @@ export class DepositSendError extends Error {
 }
 
 /**
- * Send USDC to Arena64 treasury via MetaMask using Injective best practices:
- * estimate gas (USDC-hook aware), writeContract without forced gasPrice, wait for receipt.
+ * Send USDC to Arena64 treasury via MetaMask.
+ * Uses sendTransaction + explicit gas (Injective USDC hook-safe).
  */
 export async function sendUsdcDepositToTreasury(
   params: SendUsdcDepositParams
@@ -82,7 +94,10 @@ export async function sendUsdcDepositToTreasury(
     args: [account],
   })) as bigint;
   if (usdcBal < amountMicro) {
-    throw new DepositSendError("Not enough USDC in your Connected Wallet for this deposit.");
+    throw new DepositSendError(
+      `Not enough Injective USDC (${Number(usdcBal) / 1e6} available). ` +
+        `Get testnet USDC from ${CIRCLE_FAUCET} — select Injective, not Sepolia.`
+    );
   }
 
   const injBal = await publicClient.getBalance({ address: account });
@@ -101,20 +116,24 @@ export async function sendUsdcDepositToTreasury(
       args: [treasuryAddress, amountMicro],
       account,
     });
-    const buffered = estimated * BigInt(2);
+    const buffered = estimated * BigInt(3);
     gas = buffered > USDC_GAS_FLOOR ? buffered : USDC_GAS_FLOOR;
   } catch {
     gas = USDC_GAS_FALLBACK;
   }
 
-  // No gasPrice / EIP-1559 overrides — MetaMask fills fees (Injective MetaMask docs).
-  const hash = await walletClient.writeContract({
-    chain: injectiveEvm,
-    account,
-    address: usdcAddress,
+  const data = encodeFunctionData({
     abi: USDC_ERC20_ABI,
     functionName: "transfer",
     args: [treasuryAddress, amountMicro],
+  });
+
+  // MetaMask + Injective: prefer sendTransaction with forced gas over writeContract defaults
+  const hash = await walletClient.sendTransaction({
+    chain: injectiveEvm,
+    account,
+    to: usdcAddress,
+    data,
     gas,
   });
 
@@ -125,13 +144,12 @@ export async function sendUsdcDepositToTreasury(
     });
     if (receipt.status !== "success") {
       throw new DepositSendError(
-        "Transaction failed on-chain (USDC on Injective often needs more gas — retry Deposit). Check Blockscout if unsure."
+        "Transaction failed on-chain. Injective USDC often needs higher gas — retry Deposit. Check Blockscout if unsure."
       );
     }
     return { hash, confirmed: true };
   } catch (err: unknown) {
     if (err instanceof DepositSendError) throw err;
-    // Timeout / RPC null receipt — caller falls back to balance/sync recovery.
     return { hash, confirmed: false };
   }
 }

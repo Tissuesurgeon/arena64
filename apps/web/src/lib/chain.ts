@@ -3,6 +3,10 @@ import { defineChain } from "viem";
 const chainId = Number(process.env.NEXT_PUBLIC_CHAIN_ID || 1439);
 const rpcUrl =
   process.env.NEXT_PUBLIC_RPC_URL || "https://k8s.testnet.json-rpc.injective.network/";
+/** Archival JSON-RPC from Injective network docs (fallback for balance/tx lookups). */
+const archivalRpcUrl =
+  process.env.NEXT_PUBLIC_ARCHIVAL_RPC_URL ||
+  "https://testnet.evm.archival.chain.virtual.json-rpc.injective.network/";
 const chainName = process.env.NEXT_PUBLIC_CHAIN_NAME || "Injective EVM Testnet";
 
 /** Injective EVM (testnet default: 1439, mainnet: 1776). */
@@ -11,7 +15,7 @@ export const injectiveEvm = defineChain({
   name: chainName,
   nativeCurrency: { name: "Injective", symbol: "INJ", decimals: 18 },
   rpcUrls: {
-    default: { http: [rpcUrl] },
+    default: { http: [rpcUrl, archivalRpcUrl] },
   },
   blockExplorers: {
     default: {

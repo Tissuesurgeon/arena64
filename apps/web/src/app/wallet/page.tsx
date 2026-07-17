@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
+import { useAccount, useSwitchChain } from "wagmi";
 import { getAddress, parseUnits, type Address, type Hex } from "viem";
 import { api, getStoredUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -11,9 +11,12 @@ import {
   defaultTreasuryAddress,
   defaultUsdcAddress,
   getInjectivePublicClient,
+  getMetaMaskWalletClient,
   readUsdcBalanceOf,
+  watchInjectiveUsdc,
 } from "@/lib/injectiveClient";
 import {
+  CIRCLE_FAUCET,
   INJECTIVE_TESTNET_FAUCET,
   sendUsdcDepositToTreasury,
 } from "@/lib/depositUsdc";
@@ -77,7 +80,6 @@ export default function Arena64AccountPage() {
   const { address, isConnected, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
   const publicClient = useMemo(() => getInjectivePublicClient(), []);
-  const { data: walletClient, refetch: refetchWalletClient } = useWalletClient();
   const [bal, setBal] = useState<BalanceSnap | null>(null);
   const [cfg, setCfg] = useState<WalletConfig | null>(null);
   const [txs, setTxs] = useState<TxRow[]>([]);
@@ -139,14 +141,7 @@ export default function Arena64AccountPage() {
     try {
       return await readUsdcBalanceOf(ownerAddress, usdcAddress);
     } catch {
-      // Browser RPC flake — API reads the same contract server-side
-      if (!getStoredUser()) return null;
-      try {
-        const res = await api<{ balance_micro: string }>("/api/wallet/onchain-usdc");
-        return BigInt(res.balance_micro);
-      } catch {
-        return null;
-      }
+      return null;
     }
   }, [ownerAddress, usdcAddress]);
 
@@ -441,10 +436,12 @@ export default function Arena64AccountPage() {
         await sleep(400);
       }
 
-      const refreshed = await refetchWalletClient();
-      const activeWallet = refreshed.data ?? walletClient;
-      if (!activeWallet) {
-        setMsg("Wallet not ready on Injective. Approve the network in MetaMask, then try again.");
+      // Fresh MetaMask client after network switch (wagmi client can stay stale)
+      let activeWallet;
+      try {
+        activeWallet = getMetaMaskWalletClient(address);
+      } catch {
+        setMsg("MetaMask not found. Install MetaMask, connect, then try again.");
         setBusy(false);
         setPhase("");
         return;
@@ -452,7 +449,18 @@ export default function Arena64AccountPage() {
 
       const balanceBefore = await readUsdcBalance();
       if (balanceBefore == null) {
-        setMsg("Could not read Connected Wallet USDC. Confirm MetaMask is on Injective EVM Testnet, then retry.");
+        setMsg(
+          "Could not read Injective USDC. Switch MetaMask to Injective EVM Testnet (1439), import the USDC token below, then retry."
+        );
+        setBusy(false);
+        setPhase("");
+        return;
+      }
+      if (balanceBefore < amountMicro) {
+        setMsg(
+          `Not enough Injective USDC (have ${(Number(balanceBefore) / 1e6).toFixed(2)}). ` +
+            `At Circle faucet select Injective — Sepolia USDC will not show here.`
+        );
         setBusy(false);
         setPhase("");
         return;
@@ -576,7 +584,7 @@ export default function Arena64AccountPage() {
           <p className="text-xs uppercase opacity-50">Connected Wallet</p>
           <p className="mt-1 font-mono text-sm">{shortAddress || user?.wallet_address || "—"}</p>
           <p className="mt-2 text-xs text-[var(--floodlight)]/55">
-            On-chain USDC:{" "}
+            On-chain USDC (Injective):{" "}
             {walletUsdcStatus === "loading"
               ? "…"
               : walletUsdcStatus === "error"
@@ -585,14 +593,49 @@ export default function Arena64AccountPage() {
                   ? "—"
                   : walletUsdc.toFixed(2)}
           </p>
-          {walletUsdcStatus === "error" && (
+          <div className="mt-2 flex flex-wrap gap-3 text-xs">
             <button
               type="button"
-              className="mt-1 text-xs underline opacity-70"
+              className="underline opacity-70"
               onClick={() => refreshWalletUsdc().catch(() => undefined)}
             >
-              Retry balance
+              Refresh balance
             </button>
+            <button
+              type="button"
+              className="underline opacity-70"
+              onClick={async () => {
+                try {
+                  await ensureInjectiveChain({ currentChainId: chainId, switchChainAsync });
+                  await watchInjectiveUsdc(usdcAddress);
+                  setMsg("USDC token prompted in MetaMask — approve Import, then Refresh balance.");
+                  await refreshWalletUsdc();
+                } catch (e: unknown) {
+                  setMsg(formatWalletError(e, "deposit"));
+                }
+              }}
+            >
+              Import Injective USDC in MetaMask
+            </button>
+            {ownerAddress && (
+              <a
+                className="underline opacity-70"
+                href={`${explorer}/token/${usdcAddress}?a=${ownerAddress}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                View on Blockscout
+              </a>
+            )}
+          </div>
+          {walletUsdcStatus === "ok" && walletUsdc === 0 && (
+            <p className="mt-2 text-xs text-[var(--whistle-red)]/90">
+              0 USDC on Injective. MetaMask balances on Sepolia/Ethereum do not count — claim at{" "}
+              <a className="underline" href={CIRCLE_FAUCET} target="_blank" rel="noreferrer">
+                faucet.circle.com
+              </a>{" "}
+              with network <strong>Injective</strong>.
+            </p>
           )}
         </div>
         <div>
@@ -629,20 +672,21 @@ export default function Arena64AccountPage() {
         {source === "injective" ? (
           <>
             <p className="text-sm text-[var(--floodlight)]/60">
-              Get USDC from the{" "}
+              1) Switch MetaMask to <strong>Injective EVM Testnet</strong> (chain 1439). 2) Get USDC
+              from the{" "}
               <a
                 className="underline"
-                href={cfg?.external_faucets?.circle || "https://faucet.circle.com/"}
+                href={cfg?.external_faucets?.circle || CIRCLE_FAUCET}
                 target="_blank"
                 rel="noreferrer"
               >
                 Circle faucet
               </a>{" "}
-              and testnet INJ for gas from{" "}
+              — select <strong>Injective</strong> (not Sepolia). 3) Get INJ for gas via{" "}
               <Link className="underline" href="/claim">
-                Claim 1 INJ on Arena64
+                Claim 1 INJ
               </Link>{" "}
-              (one per wallet) or the{" "}
+              or the{" "}
               <a
                 className="underline"
                 href={cfg?.external_faucets?.injective || INJECTIVE_TESTNET_FAUCET}
@@ -651,7 +695,15 @@ export default function Arena64AccountPage() {
               >
                 Injective faucet
               </a>
-              , then deposit. Watch Connected Wallet USDC drop — if it does not, the transfer never mined.
+              . Token:{" "}
+              <a
+                className="font-mono underline break-all"
+                href={`${explorer}/token/${usdcAddress}`}
+                target="_blank"
+                rel="noreferrer"
+              >
+                {usdcAddress}
+              </a>
             </p>
             <div className="flex flex-wrap items-end gap-3">
               <label className="flex flex-col gap-1 text-xs uppercase tracking-wider opacity-60">
