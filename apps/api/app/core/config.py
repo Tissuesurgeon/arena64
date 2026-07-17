@@ -132,6 +132,12 @@ class Settings(BaseSettings):
     scout_interval_minutes: int = Field(default=360, alias="SCOUT_INTERVAL_MINUTES")
     scout_bootstrap_on_start: bool = Field(default=True, alias="SCOUT_BOOTSTRAP_ON_START")
 
+    # World Cup Monitor — frequent internet watch → live snapshot + knowledge bank
+    world_cup_monitor_enabled: bool = Field(default=True, alias="WORLD_CUP_MONITOR_ENABLED")
+    world_cup_monitor_interval_minutes: int = Field(
+        default=30, alias="WORLD_CUP_MONITOR_INTERVAL_MINUTES"
+    )
+
     @model_validator(mode="after")
     def resolve_network_and_ai(self) -> "Settings":
         from app.integrations.injective.networks import get_profile

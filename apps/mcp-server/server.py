@@ -159,6 +159,16 @@ TOOLS = [
         },
     },
     {
+        "name": "runWorldCupMonitor",
+        "description": "Force one World Cup Monitor pass: search internet → update live WC 2026 snapshot + knowledge bank",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
+        "name": "getWorldCupMonitorStatus",
+        "description": "Status of the continuous World Cup internet monitor agent",
+        "inputSchema": {"type": "object", "properties": {}},
+    },
+    {
         "name": "listScoutJobs",
         "description": "List recent Web Scout scrape jobs",
         "inputSchema": {"type": "object", "properties": {}},
@@ -281,6 +291,10 @@ async def call_tool(name: str, arguments: dict) -> Any:
             "auto_approve": arguments.get("auto_approve"),
         }
         return await _post("/api/admin/scout/run", body, timeout=180)
+    if name == "runWorldCupMonitor":
+        return await _post("/api/admin/world-cup-monitor/run", {}, timeout=180)
+    if name == "getWorldCupMonitorStatus":
+        return await _get("/api/world-cup/monitor")
     if name == "listScoutJobs":
         return await _get("/api/admin/scout/jobs")
     if name == "listKnowledge":

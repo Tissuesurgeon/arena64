@@ -56,10 +56,26 @@ type WorldCupPayload = {
       surviving?: string[];
     };
     disclaimer?: string;
+    _monitor?: {
+      updated_at?: string;
+      sources?: string[];
+      llm_provider?: string | null;
+    };
   };
   fun_facts?: FunFact[];
   history: HistoryRow[];
   knowledge_facts: { id: string; title: string; fact: string; category: string }[];
+  monitor?: {
+    enabled?: boolean;
+    interval_minutes?: number;
+    last_run_at?: string | null;
+    finished_at?: string | null;
+    last_status?: string;
+    live_overlay?: boolean;
+    facts_stored?: number;
+    snapshot_updated?: boolean;
+    running?: boolean;
+  };
 };
 
 type ViewId = "current" | "fun-facts" | "so-far" | "history";
@@ -70,9 +86,26 @@ export default function WorldCupPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<WorldCupPayload>("/api/world-cup")
-      .then(setData)
-      .catch(() => setError("Could not load World Cup stats right now."));
+    let cancelled = false;
+    const load = () =>
+      api<WorldCupPayload>("/api/world-cup")
+        .then((payload) => {
+          if (!cancelled) {
+            setData(payload);
+            setError("");
+          }
+        })
+        .catch(() => {
+          if (!cancelled) setError("Could not load World Cup stats right now.");
+        });
+
+    load();
+    // Keep the page fresh while the monitor agent polls the internet
+    const id = window.setInterval(load, 60_000);
+    return () => {
+      cancelled = true;
+      window.clearInterval(id);
+    };
   }, []);
 
   const cur = data?.current;
@@ -81,14 +114,59 @@ export default function WorldCupPage() {
   const knowledge2026 = (data?.knowledge_facts || []).filter(
     (f) => f.category === "world-cup-2026" || f.category === "world-cup" || f.category === "football-news"
   );
+  const monitor = data?.monitor;
+  const monitorStamp =
+    cur?._monitor?.updated_at || monitor?.finished_at || monitor?.last_run_at || cur?.updated_at;
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-12">
       <p className="text-xs uppercase tracking-[0.3em] text-[var(--trophy-gold)]">Shared knowledge</p>
       <h1 className="led-title mt-2 text-5xl md:text-6xl">World Cup 2026</h1>
       <p className="mt-3 max-w-2xl text-[var(--floodlight)]/65">
-        Current tournament fun facts and data — the same bank Arena64 agents research during cups.
+        Live tournament pulse for coaches and agents — a monitor agent watches the open web and refreshes this bank.
       </p>
+
+      {monitor && (
+        <div className="mt-5 flex flex-wrap items-center gap-2 text-[11px] uppercase tracking-[0.18em]">
+          <span
+            className={`inline-flex items-center gap-2 border px-3 py-1.5 ${
+              monitor.enabled
+                ? "border-[var(--trophy-gold)]/40 bg-[var(--trophy-gold)]/10 text-[var(--trophy-gold)]"
+                : "border-white/15 text-[var(--floodlight)]/45"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                monitor.running
+                  ? "animate-pulse bg-[var(--trophy-gold)]"
+                  : monitor.enabled
+                    ? "bg-[var(--pitch-mid)]"
+                    : "bg-white/30"
+              }`}
+            />
+            {monitor.running
+              ? "Monitor scanning…"
+              : monitor.enabled
+                ? `Live monitor · every ${monitor.interval_minutes ?? 30}m`
+                : "Monitor offline"}
+          </span>
+          {monitorStamp && (
+            <span className="border border-white/10 px-3 py-1.5 text-[var(--floodlight)]/50 normal-case tracking-normal">
+              Updated {new Date(monitorStamp).toLocaleString()}
+            </span>
+          )}
+          {monitor.live_overlay && (
+            <span className="border border-[var(--kit-home)]/40 px-3 py-1.5 text-[var(--kit-home)]">
+              Live overlay
+            </span>
+          )}
+          {typeof monitor.facts_stored === "number" && monitor.facts_stored > 0 && (
+            <span className="border border-white/10 px-3 py-1.5 text-[var(--floodlight)]/45">
+              +{monitor.facts_stored} facts last run
+            </span>
+          )}
+        </div>
+      )}
 
       <div className="mt-8 flex flex-wrap gap-2">
         {(

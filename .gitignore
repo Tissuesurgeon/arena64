@@ -23,3 +23,5 @@ htmlcov/
 .vscode/
 blockchain/cache/
 blockchain/out/
+apps/api/app/data/world_cup_2026_live.json
+apps/api/app/data/world_cup_monitor_status.json

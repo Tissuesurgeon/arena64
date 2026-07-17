@@ -279,6 +279,7 @@ python server.py
 | Premium insight | [`packages/agent-skills/arena64-premium-insight`](packages/agent-skills/arena64-premium-insight/SKILL.md) |
 | Strategy coach | [`packages/agent-skills/arena64-strategy-coach`](packages/agent-skills/arena64-strategy-coach/SKILL.md) |
 | Tournament director | [`packages/agent-skills/arena64-tournament-director`](packages/agent-skills/arena64-tournament-director/SKILL.md) |
+| World Cup monitor | [`packages/agent-skills/arena64-world-cup-monitor`](packages/agent-skills/arena64-world-cup-monitor/SKILL.md) |
 | Platform (scout / …) | sibling folders |
 
 ---

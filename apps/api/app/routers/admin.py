@@ -9,10 +9,12 @@ from app.agents.web_scout import (
     DEFAULT_SEARCH_QUERIES,
     web_scout_agent,
 )
+from app.agents.world_cup_monitor import read_monitor_status
 from app.core.auth import require_admin
 from app.core.config import get_settings
 from app.core.database import get_db
 from app.models import FairPlayScore, KnowledgeEntry, Question, ScrapeJob, Tournament, User
+from app.services.world_cup_monitor_worker import run_world_cup_monitor_once
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 settings = get_settings()
@@ -172,6 +174,25 @@ async def scout_run(
         "queries": (job.meta or {}).get("queries"),
         "llm_provider": (job.meta or {}).get("llm_provider"),
     }
+
+
+@router.get("/world-cup-monitor/status")
+async def world_cup_monitor_admin_status(user: User = Depends(require_admin)):
+    s = get_settings()
+    return {
+        "enabled": s.world_cup_monitor_enabled,
+        "interval_minutes": s.world_cup_monitor_interval_minutes,
+        **read_monitor_status(),
+    }
+
+
+@router.post("/world-cup-monitor/run")
+async def world_cup_monitor_run(user: User = Depends(require_admin)):
+    """Force one World Cup Monitor pass (search → scrape → live snapshot + knowledge)."""
+    try:
+        return await run_world_cup_monitor_once()
+    except Exception as exc:  # noqa: BLE001
+        raise HTTPException(status_code=502, detail=str(exc)[:500]) from exc
 
 
 @router.get("/scout/jobs")

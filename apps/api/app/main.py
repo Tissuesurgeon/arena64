@@ -10,6 +10,7 @@ from app.routers import admin, agents, ai, auth, challenges, coach, faucet, insi
 from app.services.scout_worker import start_scout_scheduler, stop_scout_scheduler
 from app.services.seed import seed_if_empty
 from app.services.tournament_room_agent import start_room_agent, stop_room_agent
+from app.services.world_cup_monitor_worker import start_world_cup_monitor, stop_world_cup_monitor
 
 
 @asynccontextmanager
@@ -18,9 +19,11 @@ async def lifespan(app: FastAPI):
     await seed_if_empty()
     start_room_agent()
     start_scout_scheduler()
+    start_world_cup_monitor()
     yield
     await stop_room_agent()
     await stop_scout_scheduler()
+    await stop_world_cup_monitor()
 
 
 settings = get_settings()
