@@ -51,8 +51,11 @@ export function formatWalletError(err: unknown, context: "deposit" | "withdraw" 
     return "Not enough USDC (or gas) in your Connected Wallet.";
   }
 
-  if (lower.includes("chain") && (lower.includes("mismatch") || lower.includes("switch"))) {
-    return "Switch your wallet to Injective EVM Testnet, then try again.";
+  if (
+    lower.includes("network switch rejected") ||
+    (lower.includes("chain") && (lower.includes("mismatch") || lower.includes("switch")))
+  ) {
+    return "Approve Injective EVM Testnet in MetaMask, then try Deposit again.";
   }
 
   if (lower.includes("already recorded") || lower.includes("already credited")) {

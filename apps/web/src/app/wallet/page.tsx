@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAccount, usePublicClient, useWalletClient } from "wagmi";
+import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
 import { parseUnits, type Hex } from "viem";
 import { api, getStoredUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
-import { INJECTIVE_CHAIN_ID } from "@/lib/chain";
+import { ensureInjectiveChain, INJECTIVE_CHAIN_ID } from "@/lib/chain";
 import {
   INJECTIVE_TESTNET_FAUCET,
   sendUsdcDepositToTreasury,
@@ -70,8 +70,9 @@ function sleep(ms: number) {
 export default function Arena64AccountPage() {
   const { user, refreshUser, shortAddress } = useAuth();
   const { address, isConnected, chainId } = useAccount();
+  const { switchChainAsync } = useSwitchChain();
   const publicClient = usePublicClient({ chainId: INJECTIVE_CHAIN_ID });
-  const { data: walletClient } = useWalletClient({ chainId: INJECTIVE_CHAIN_ID });
+  const { data: walletClient, refetch: refetchWalletClient } = useWalletClient();
   const [bal, setBal] = useState<BalanceSnap | null>(null);
   const [cfg, setCfg] = useState<WalletConfig | null>(null);
   const [txs, setTxs] = useState<TxRow[]>([]);
@@ -367,30 +368,41 @@ export default function Arena64AccountPage() {
       setMsg("Connected wallet must match your Arena64 login.");
       return;
     }
-    if (chainId == null || chainId !== INJECTIVE_CHAIN_ID) {
-      setMsg("Switch your wallet to Injective EVM Testnet, then try again.");
-      return;
-    }
-    if (!publicClient || !walletClient) {
-      setMsg("Wallet not ready. Reconnect MetaMask and try again.");
-      return;
-    }
     const value = Number(amount);
     if (!value || value <= 0) {
       setMsg("Enter a positive USDC amount.");
       return;
     }
     const amountMicro = parseUnits(String(value), 6);
-    const balanceBefore = await readUsdcBalance();
 
     try {
       setBusy(true);
-      setPhase("Approve in MetaMask…");
+      // Login no longer forces Injective — switch/add network so MetaMask can pop for the transfer
+      if (chainId !== INJECTIVE_CHAIN_ID) {
+        setPhase("Switch to Injective in MetaMask…");
+        await ensureInjectiveChain({
+          currentChainId: chainId,
+          switchChainAsync,
+        });
+        await sleep(400);
+      }
+
+      const refreshed = await refetchWalletClient();
+      const activeWallet = refreshed.data ?? walletClient;
+      if (!publicClient || !activeWallet) {
+        setMsg("Wallet not ready on Injective. Approve the network in MetaMask, then try again.");
+        setBusy(false);
+        setPhase("");
+        return;
+      }
+
+      const balanceBefore = await readUsdcBalance();
+      setPhase("Approve USDC transfer in MetaMask…");
       const result = await sendUsdcDepositToTreasury({
         publicClient,
-        walletClient,
+        walletClient: activeWallet,
         account: address,
-        chainId,
+        chainId: INJECTIVE_CHAIN_ID,
         usdcAddress: cfg.usdc_address as `0x${string}`,
         treasuryAddress: cfg.treasury_address as `0x${string}`,
         amountMicro,
@@ -413,7 +425,12 @@ export default function Arena64AccountPage() {
         setSubmittedHash(recovered);
         setManualHash(recovered);
         setMsg("Wallet reported an error, but a tx hash was found — verifying on-chain…");
-        await waitForOnchainCredit({ hash: recovered, amountMicro, balanceBefore });
+        const amountMicroRetry = parseUnits(String(Number(amount) || 0), 6);
+        await waitForOnchainCredit({
+          hash: recovered,
+          amountMicro: amountMicroRetry,
+          balanceBefore: null,
+        });
         return;
       }
       setMsg(formatWalletError(e, "deposit"));
