@@ -2,7 +2,26 @@ function normalizeApiUrl(raw: string): string {
   return raw.trim().replace(/\/+$/, "");
 }
 
-const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
+/**
+ * Browser: always use same-origin `/arena-api` proxy (see next.config.js rewrites).
+ * That way Vercel works even if NEXT_PUBLIC_API_URL was left as localhost.
+ * Server/SSR: use absolute URL.
+ */
+export function getApiUrl(): string {
+  if (typeof window !== "undefined") {
+    return "/arena-api";
+  }
+  const env = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL || "");
+  if (env && !/localhost|127\.0\.0\.1/.test(env)) return env;
+  if (process.env.VERCEL) return "https://arena64-production.up.railway.app";
+  return env || "http://localhost:8000";
+}
+
+/** @deprecated use getApiUrl() — kept for imports that read a constant */
+export const API_URL =
+  typeof window === "undefined"
+    ? normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000")
+    : "/arena-api";
 
 export type User = {
   id: string;
@@ -73,29 +92,11 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
-function assertApiReachable(): void {
-  if (typeof window === "undefined") return;
-  const pageHttps = window.location.protocol === "https:";
-  if (pageHttps && API_URL.startsWith("http://")) {
-    throw new Error(
-      "API is configured with http:// but the site is https:// — set NEXT_PUBLIC_API_URL to your Railway https URL and redeploy Vercel."
-    );
-  }
-  if (
-    pageHttps &&
-    (API_URL.includes("localhost") || API_URL.includes("127.0.0.1"))
-  ) {
-    throw new Error(
-      "NEXT_PUBLIC_API_URL still points at localhost. Set it to your Railway API URL in Vercel env and redeploy."
-    );
-  }
-}
-
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  assertApiReachable();
+  const base = getApiUrl();
   let res: Response;
   try {
-    res = await fetch(`${API_URL}${path}`, {
+    res = await fetch(`${base}${path}`, {
       ...init,
       headers: {
         "Content-Type": "application/json",
@@ -105,7 +106,7 @@ export async function api<T>(path: string, init?: RequestInit): Promise<T> {
     });
   } catch {
     throw new Error(
-      `Cannot reach API at ${API_URL}. Check NEXT_PUBLIC_API_URL and Railway CORS (API_CORS_ORIGINS).`
+      `Cannot reach API (${base}). On Vercel, ensure the /arena-api rewrite points at Railway.`
     );
   }
   if (!res.ok) {
@@ -142,5 +143,3 @@ export function logout() {
   localStorage.removeItem("arena64_token");
   localStorage.removeItem("arena64_user");
 }
-
-export { API_URL };

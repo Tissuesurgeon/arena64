@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useAccount, useConnect, useDisconnect } from "wagmi";
 import { useAuth } from "@/lib/auth";
+import { getApiUrl } from "@/lib/api";
 import { INJECTIVE_CHAIN_ID } from "@/lib/chain";
 
 type Props = {
@@ -45,14 +46,14 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
     try {
       const connector = connectors.find((c) => c.uid === connectorId || c.id === connectorId);
       if (!connector) throw new Error("Wallet not available");
-      const result = await connectAsync({ connector, chainId: INJECTIVE_CHAIN_ID });
+      // Do not force chainId here — MetaMask often lacks Injective until added.
+      // Login only needs personal_sign (any chain).
+      const result = await connectAsync({ connector });
       const connected = result.accounts?.[0];
-      // Pass address from connect result — React state may not have updated yet
       await loginWithWallet(connected);
       setOpen(false);
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
-      // Keep panel open so user can retry "Sign Arena64 login" if they rejected once
       setLocalError(msg);
     }
   }
@@ -156,7 +157,7 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
           }`}
         >
           <p className="mb-2 text-[10px] uppercase tracking-[0.2em] text-[var(--floodlight)]/45">
-            Injective EVM · {INJECTIVE_CHAIN_ID}
+            Sign message to enter · API {getApiUrl()}
           </p>
 
           {!isConnected && (
@@ -181,7 +182,9 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
             <div className="space-y-2">
               <p className="text-xs text-[var(--floodlight)]/70">
                 {address?.slice(0, 6)}…{address?.slice(-4)}
-                {wrongChain ? " · wrong network — switch to Injective 1439" : " · connected — sign to finish"}
+                {wrongChain
+                  ? " · (Injective optional for deposits later)"
+                  : " · connected — approve signature"}
               </p>
               <button
                 type="button"
@@ -213,7 +216,9 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
           </div>
 
           {(localError || error) && (
-            <p className="mt-2 text-xs text-[var(--whistle-red)]">{localError || error}</p>
+            <p className="mt-2 break-words text-xs text-[var(--whistle-red)]">
+              {localError || error}
+            </p>
           )}
         </div>
       )}

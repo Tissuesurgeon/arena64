@@ -77,8 +77,8 @@ Use `apps/api/Dockerfile` + `apps/ai-runtime/Dockerfile` as **two** Railway serv
 
 | Variable | Example |
 |----------|---------|
-| `NEXT_PUBLIC_API_URL` | `https://your-api.up.railway.app` |
-| `NEXT_PUBLIC_WS_URL` | `wss://your-api.up.railway.app/ws` |
+| `NEXT_PUBLIC_API_URL` | `https://arena64-production.up.railway.app` (rewrite target; browser uses `/arena-api`) |
+| `NEXT_PUBLIC_WS_URL` | `wss://arena64-production.up.railway.app/ws` |
 | `NEXT_PUBLIC_CHAIN_ID` | `1439` |
 | `NEXT_PUBLIC_CHAIN_NAME` | `Injective EVM Testnet` |
 | `NEXT_PUBLIC_RPC_URL` | Injective testnet RPC |

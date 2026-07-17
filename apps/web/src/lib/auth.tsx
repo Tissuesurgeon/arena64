@@ -10,9 +10,8 @@ import {
   type ReactNode,
 } from "react";
 import { getAddress } from "viem";
-import { useAccount, useDisconnect, useSignMessage, useSwitchChain } from "wagmi";
+import { useAccount, useDisconnect, useSignMessage } from "wagmi";
 import { api, demoLogin, getStoredUser, logout as clearSession, type User } from "@/lib/api";
-import { INJECTIVE_CHAIN_ID } from "@/lib/chain";
 
 type AuthContextValue = {
   user: User | null;
@@ -38,9 +37,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const { address, isConnected, chainId } = useAccount();
+  const { address } = useAccount();
   const { signMessageAsync } = useSignMessage();
-  const { switchChainAsync } = useSwitchChain();
   const { disconnect } = useDisconnect();
 
   useEffect(() => {
@@ -66,7 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("Connect a wallet first");
         }
 
-        // Prefer checksummed account for wagmi/MetaMask; API stores lowercase
+        // personal_sign works on any chain — do NOT require Injective for login
         let account: `0x${string}`;
         try {
           account = getAddress(raw);
@@ -74,16 +72,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           throw new Error("Invalid wallet address");
         }
         const wallet = account.toLowerCase();
-
-        if (chainId != null && chainId !== INJECTIVE_CHAIN_ID) {
-          try {
-            await switchChainAsync({ chainId: INJECTIVE_CHAIN_ID });
-          } catch {
-            throw new Error(
-              `Switch MetaMask to Injective EVM Testnet (chain ${INJECTIVE_CHAIN_ID}), then tap Sign in again.`
-            );
-          }
-        }
 
         const nonce = await api<{ message: string; nonce: string }>(
           `/api/auth/nonce?wallet_address=${encodeURIComponent(wallet)}`
@@ -94,7 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         } catch (signErr: unknown) {
           const s = signErr instanceof Error ? signErr.message : String(signErr);
           if (/reject|denied|cancel/i.test(s)) {
-            throw new Error("Signature rejected in MetaMask — approve the Arena64 login message to sign in.");
+            throw new Error(
+              "Signature rejected in MetaMask — approve the Arena64 login message to sign in."
+            );
           }
           throw new Error(s || "MetaMask signature failed");
         }
@@ -119,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setBusy(false);
       }
     },
-    [address, chainId, signMessageAsync, switchChainAsync]
+    [address, signMessageAsync]
   );
 
   const loginDemo = useCallback(async () => {
@@ -181,7 +171,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       logout,
       setUser,
       refreshUser,
-      shortAddress: user?.wallet_address ? shorten(user.wallet_address) : address ? shorten(address) : null,
+      shortAddress: user?.wallet_address
+        ? shorten(user.wallet_address)
+        : address
+          ? shorten(address)
+          : null,
     }),
     [user, busy, error, loginWithWallet, loginDemo, logout, refreshUser, address]
   );
