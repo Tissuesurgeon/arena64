@@ -227,6 +227,17 @@ class UsdcDepositVerifier:
                 seen.add(row["tx_hash"])
         return recent
 
+    async def balance_of(self, owner: str) -> int:
+        """ERC-20 USDC balanceOf (raw micro-units, 6 decimals)."""
+        if not self.usdc:
+            raise DepositError("USDC address not configured")
+        owner = owner.lower().removeprefix("0x")
+        data = "0x70a08231" + owner.zfill(64)
+        result = await self._rpc("eth_call", [{"to": self.usdc, "data": data}, "latest"])
+        if result is None:
+            raise DepositError("USDC balanceOf returned empty")
+        return int(str(result), 16)
+
     async def verify_transfer(self, *, tx_hash: str, expected_from: str) -> dict[str, Any]:
         if not self.treasury:
             raise DepositError("ARENA64_TREASURY_ADDRESS not configured")

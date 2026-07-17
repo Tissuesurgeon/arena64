@@ -158,6 +158,28 @@ async def demo_faucet(
     return {"usdc": snap["available_usdc"], **snap}
 
 
+@router.get("/onchain-usdc")
+async def onchain_usdc(user: User = Depends(get_current_user)):
+    """Connected-wallet USDC on Injective (server RPC) — used when the browser RPC fails."""
+    from app.integrations.injective.usdc_deposit import DepositError, UsdcDepositVerifier
+
+    settings = _settings()
+    try:
+        raw = await UsdcDepositVerifier().balance_of(user.wallet_address)
+    except DepositError as exc:
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("onchain-usdc failed wallet=%s err=%s", user.wallet_address, exc)
+        raise HTTPException(status_code=502, detail="Could not read on-chain USDC balance") from exc
+    return {
+        "wallet_address": user.wallet_address,
+        "usdc_address": settings.injective_usdc_address,
+        "balance_usdc": raw / 1_000_000,
+        "balance_micro": str(raw),
+        "chain_id": settings.injective_evm_chain_id,
+    }
+
+
 @router.get("/cctp/config")
 async def cctp_config():
     settings = _settings()

@@ -1,16 +1,21 @@
 "use client";
 
 import Link from "next/link";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { useAccount, usePublicClient, useSwitchChain, useWalletClient } from "wagmi";
-import { parseUnits, type Hex } from "viem";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useAccount, useSwitchChain, useWalletClient } from "wagmi";
+import { getAddress, parseUnits, type Address, type Hex } from "viem";
 import { api, getStoredUser } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
 import { ensureInjectiveChain, INJECTIVE_CHAIN_ID } from "@/lib/chain";
 import {
+  defaultTreasuryAddress,
+  defaultUsdcAddress,
+  getInjectivePublicClient,
+  readUsdcBalanceOf,
+} from "@/lib/injectiveClient";
+import {
   INJECTIVE_TESTNET_FAUCET,
   sendUsdcDepositToTreasury,
-  USDC_ERC20_ABI,
 } from "@/lib/depositUsdc";
 import { formatWalletError } from "@/lib/walletErrors";
 
@@ -71,7 +76,7 @@ export default function Arena64AccountPage() {
   const { user, refreshUser, shortAddress } = useAuth();
   const { address, isConnected, chainId } = useAccount();
   const { switchChainAsync } = useSwitchChain();
-  const publicClient = usePublicClient({ chainId: INJECTIVE_CHAIN_ID });
+  const publicClient = useMemo(() => getInjectivePublicClient(), []);
   const { data: walletClient, refetch: refetchWalletClient } = useWalletClient();
   const [bal, setBal] = useState<BalanceSnap | null>(null);
   const [cfg, setCfg] = useState<WalletConfig | null>(null);
@@ -88,31 +93,79 @@ export default function Arena64AccountPage() {
   const [cctpAmount, setCctpAmount] = useState("25");
   const [submittedHash, setSubmittedHash] = useState<string>("");
   const [walletUsdc, setWalletUsdc] = useState<number | null>(null);
+  const [walletUsdcStatus, setWalletUsdcStatus] = useState<"idle" | "loading" | "ok" | "error">(
+    "idle"
+  );
   const creditedHashes = useRef<Set<string>>(new Set());
   const creditInFlight = useRef<string | null>(null);
 
-  const readUsdcBalance = useCallback(async (): Promise<bigint | null> => {
-    if (!publicClient || !cfg?.usdc_address || !address) return null;
+  /** Prefer live MetaMask account; fall back to signed-in wallet for balance reads. */
+  const ownerAddress = useMemo((): Address | null => {
+    const raw = address || user?.wallet_address;
+    if (!raw) return null;
     try {
-      return (await publicClient.readContract({
-        address: cfg.usdc_address as `0x${string}`,
-        abi: USDC_ERC20_ABI,
-        functionName: "balanceOf",
-        args: [address],
-      })) as bigint;
+      return getAddress(raw);
     } catch {
       return null;
     }
-  }, [publicClient, cfg?.usdc_address, address]);
+  }, [address, user?.wallet_address]);
+
+  const usdcAddress = useMemo((): Address => {
+    const fromCfg = cfg?.usdc_address;
+    if (fromCfg) {
+      try {
+        return getAddress(fromCfg);
+      } catch {
+        /* fall through */
+      }
+    }
+    return defaultUsdcAddress();
+  }, [cfg?.usdc_address]);
+
+  const treasuryAddress = useMemo((): Address | null => {
+    const fromCfg = cfg?.treasury_address;
+    if (fromCfg) {
+      try {
+        return getAddress(fromCfg);
+      } catch {
+        /* fall through */
+      }
+    }
+    return defaultTreasuryAddress();
+  }, [cfg?.treasury_address]);
+
+  const readUsdcBalance = useCallback(async (): Promise<bigint | null> => {
+    if (!ownerAddress) return null;
+    try {
+      return await readUsdcBalanceOf(ownerAddress, usdcAddress);
+    } catch {
+      // Browser RPC flake — API reads the same contract server-side
+      if (!getStoredUser()) return null;
+      try {
+        const res = await api<{ balance_micro: string }>("/api/wallet/onchain-usdc");
+        return BigInt(res.balance_micro);
+      } catch {
+        return null;
+      }
+    }
+  }, [ownerAddress, usdcAddress]);
 
   const refreshWalletUsdc = useCallback(async () => {
+    if (!ownerAddress) {
+      setWalletUsdc(null);
+      setWalletUsdcStatus("idle");
+      return;
+    }
+    setWalletUsdcStatus("loading");
     const raw = await readUsdcBalance();
     if (raw == null) {
       setWalletUsdc(null);
+      setWalletUsdcStatus("error");
       return;
     }
     setWalletUsdc(Number(raw) / 1e6);
-  }, [readUsdcBalance]);
+    setWalletUsdcStatus("ok");
+  }, [readUsdcBalance, ownerAddress]);
 
   const refresh = useCallback(async () => {
     if (!getStoredUser()) return;
@@ -163,12 +216,17 @@ export default function Arena64AccountPage() {
 
   useEffect(() => {
     syncDeposits({ quiet: true }).catch(() => undefined);
-    api<WalletConfig>("/api/wallet/cctp/config").then(setCfg).catch(() => undefined);
+    api<WalletConfig>("/api/wallet/cctp/config")
+      .then(setCfg)
+      .catch(() => {
+        // Still show balance / allow deposit via hardcoded testnet defaults
+        setCfg((prev) => prev ?? { network: "testnet", chain_id: INJECTIVE_CHAIN_ID });
+      });
   }, [syncDeposits]);
 
   useEffect(() => {
     refreshWalletUsdc().catch(() => undefined);
-  }, [refreshWalletUsdc, address, cfg?.usdc_address]);
+  }, [refreshWalletUsdc, ownerAddress, usdcAddress]);
 
   // MetaMask on Injective can sit on "pending/failed" while the send never resolves.
   useEffect(() => {
@@ -352,16 +410,12 @@ export default function Arena64AccountPage() {
   async function depositOnchain() {
     setMsg("");
     setSubmittedHash("");
-    if (!cfg?.treasury_address) {
-      setMsg("Deposits are temporarily unavailable. Please try again later.");
-      return;
-    }
-    if (!cfg.usdc_address) {
+    if (!treasuryAddress) {
       setMsg("Deposits are temporarily unavailable. Please try again later.");
       return;
     }
     if (!isConnected || !address) {
-      setMsg("Connect the same wallet you signed in with.");
+      setMsg("Connect the same wallet you signed in with (MetaMask must be unlocked).");
       return;
     }
     if (user?.wallet_address && address.toLowerCase() !== user.wallet_address.toLowerCase()) {
@@ -389,7 +443,7 @@ export default function Arena64AccountPage() {
 
       const refreshed = await refetchWalletClient();
       const activeWallet = refreshed.data ?? walletClient;
-      if (!publicClient || !activeWallet) {
+      if (!activeWallet) {
         setMsg("Wallet not ready on Injective. Approve the network in MetaMask, then try again.");
         setBusy(false);
         setPhase("");
@@ -397,14 +451,20 @@ export default function Arena64AccountPage() {
       }
 
       const balanceBefore = await readUsdcBalance();
+      if (balanceBefore == null) {
+        setMsg("Could not read Connected Wallet USDC. Confirm MetaMask is on Injective EVM Testnet, then retry.");
+        setBusy(false);
+        setPhase("");
+        return;
+      }
       setPhase("Approve USDC transfer in MetaMask…");
       const result = await sendUsdcDepositToTreasury({
         publicClient,
         walletClient: activeWallet,
         account: address,
         chainId: INJECTIVE_CHAIN_ID,
-        usdcAddress: cfg.usdc_address as `0x${string}`,
-        treasuryAddress: cfg.treasury_address as `0x${string}`,
+        usdcAddress,
+        treasuryAddress,
         amountMicro,
       });
       setSubmittedHash(result.hash);
@@ -516,8 +576,24 @@ export default function Arena64AccountPage() {
           <p className="text-xs uppercase opacity-50">Connected Wallet</p>
           <p className="mt-1 font-mono text-sm">{shortAddress || user?.wallet_address || "—"}</p>
           <p className="mt-2 text-xs text-[var(--floodlight)]/55">
-            On-chain USDC: {walletUsdc == null ? "—" : walletUsdc.toFixed(2)}
+            On-chain USDC:{" "}
+            {walletUsdcStatus === "loading"
+              ? "…"
+              : walletUsdcStatus === "error"
+                ? "unavailable"
+                : walletUsdc == null
+                  ? "—"
+                  : walletUsdc.toFixed(2)}
           </p>
+          {walletUsdcStatus === "error" && (
+            <button
+              type="button"
+              className="mt-1 text-xs underline opacity-70"
+              onClick={() => refreshWalletUsdc().catch(() => undefined)}
+            >
+              Retry balance
+            </button>
+          )}
         </div>
         <div>
           <p className="text-xs uppercase opacity-50">Arena64 Balance</p>
@@ -588,7 +664,7 @@ export default function Arena64AccountPage() {
               </label>
               <button
                 type="button"
-                disabled={busy || !cfg?.treasury_address}
+                disabled={busy || !treasuryAddress}
                 onClick={depositOnchain}
                 className="btn-press btn-tap bg-[var(--trophy-gold)] px-5 py-3 text-sm font-semibold uppercase text-[var(--night-sky)] disabled:opacity-40"
               >
