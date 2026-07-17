@@ -75,6 +75,17 @@ function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
 }
 
+function shortenHash(hash: string) {
+  if (hash.length < 14) return hash;
+  return `${hash.slice(0, 8)}…${hash.slice(-6)}`;
+}
+
+function formatTxType(type: string) {
+  return type.replaceAll("_", " ").toLowerCase();
+}
+
+const DEPOSIT_PRESETS = ["1", "5", "10", "25"] as const;
+
 export default function Arena64AccountPage() {
   const { user, refreshUser, shortAddress } = useAuth();
   const { address, isConnected, chainId } = useAccount();
@@ -565,311 +576,554 @@ export default function Arena64AccountPage() {
   const explorer = cfg?.explorer_url || "https://testnet.blockscout.injective.network";
   const available = bal?.available_usdc ?? user?.available_usdc ?? user?.usdc_balance ?? 0;
   const locked = bal?.locked_usdc ?? user?.locked_usdc ?? 0;
+  const totalArena = Number(available) + Number(locked);
+  const onInjective = chainId === INJECTIVE_CHAIN_ID;
+  const walletLabel = shortAddress || (user?.wallet_address ? shortenHash(user.wallet_address) : "—");
+  const walletUsdcLabel =
+    walletUsdcStatus === "loading"
+      ? "…"
+      : walletUsdcStatus === "error"
+        ? "—"
+        : walletUsdc == null
+          ? "—"
+          : walletUsdc.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  async function importUsdcToken() {
+    try {
+      await ensureInjectiveChain({ currentChainId: chainId, switchChainAsync });
+      await watchInjectiveUsdc(usdcAddress);
+      setMsg("Approve Import Token in MetaMask, then refresh balance.");
+      await refreshWalletUsdc();
+    } catch (e: unknown) {
+      setMsg(formatWalletError(e, "deposit"));
+    }
+  }
+
+  function runSyncDeposits() {
+    setBusy(true);
+    setPhase("Scanning treasury transfers…");
+    syncDeposits()
+      .catch(() => undefined)
+      .finally(() => {
+        setBusy(false);
+        setPhase((p) => (p === "Scanning treasury transfers…" ? "" : p));
+      });
+  }
 
   return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
-      <p className="text-xs uppercase tracking-[0.3em] text-[var(--trophy-gold)]">Arena64 Account</p>
-      <h1 className="led-title mt-2 text-5xl">Arena64 Balance</h1>
-      <p className="mt-3 text-[var(--floodlight)]/65">
-        Move USDC from your Connected Wallet into your Arena64 Account. Agents spend from this balance —
-        not from your chain wallet mid-match.
-      </p>
-      <p className="mt-2 inline-block border border-[var(--trophy-gold)]/40 px-3 py-1 text-xs uppercase tracking-widest text-[var(--trophy-gold)]">
-        {network} · chain {String(cfg?.chain_id ?? "—")}
-        {chainId ? ` · wallet ${chainId}` : ""}
-      </p>
+    <div className="relative mx-auto max-w-5xl px-4 py-10 sm:py-14">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-8 h-56 bg-[radial-gradient(ellipse_at_top,rgba(212,160,23,0.16),transparent_65%)]"
+      />
 
-      <div className="mt-8 grid gap-4 sm:grid-cols-2 chalk-line pitch-surface p-6">
+      <header className="relative flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <p className="text-xs uppercase opacity-50">Connected Wallet</p>
-          <p className="mt-1 font-mono text-sm">{shortAddress || user?.wallet_address || "—"}</p>
-          <p className="mt-2 text-xs text-[var(--floodlight)]/55">
-            On-chain USDC (Injective):{" "}
-            {walletUsdcStatus === "loading"
-              ? "…"
-              : walletUsdcStatus === "error"
-                ? "unavailable"
-                : walletUsdc == null
-                  ? "—"
-                  : walletUsdc.toFixed(2)}
+          <p className="text-[11px] uppercase tracking-[0.35em] text-[var(--trophy-gold)]">Treasury</p>
+          <h1 className="led-title mt-1 text-5xl sm:text-6xl">Arena Wallet</h1>
+          <p className="mt-2 max-w-xl text-sm text-[var(--floodlight)]/60">
+            Deposit Injective USDC to your Arena64 balance. Agents spend from Available — not from MetaMask mid-match.
           </p>
-          <div className="mt-2 flex flex-wrap gap-3 text-xs">
-            <button
-              type="button"
-              className="underline opacity-70"
-              onClick={() => refreshWalletUsdc().catch(() => undefined)}
-            >
-              Refresh balance
-            </button>
-            <button
-              type="button"
-              className="underline opacity-70"
-              onClick={async () => {
-                try {
-                  await ensureInjectiveChain({ currentChainId: chainId, switchChainAsync });
-                  await watchInjectiveUsdc(usdcAddress);
-                  setMsg("USDC token prompted in MetaMask — approve Import, then Refresh balance.");
-                  await refreshWalletUsdc();
-                } catch (e: unknown) {
-                  setMsg(formatWalletError(e, "deposit"));
-                }
-              }}
-            >
-              Import Injective USDC in MetaMask
-            </button>
-            {ownerAddress && (
-              <a
-                className="underline opacity-70"
-                href={`${explorer}/token/${usdcAddress}?a=${ownerAddress}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                View on Blockscout
-              </a>
-            )}
-          </div>
-          {walletUsdcStatus === "ok" && walletUsdc === 0 && (
-            <p className="mt-2 text-xs text-[var(--whistle-red)]/90">
-              0 USDC on Injective. MetaMask balances on Sepolia/Ethereum do not count — claim at{" "}
-              <a className="underline" href={CIRCLE_FAUCET} target="_blank" rel="noreferrer">
-                faucet.circle.com
-              </a>{" "}
-              with network <strong>Injective</strong>.
+        </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="inline-flex items-center gap-2 border border-[var(--trophy-gold)]/35 bg-[var(--trophy-gold)]/10 px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] text-[var(--trophy-gold)]">
+            <span className="h-1.5 w-1.5 rounded-full bg-[var(--trophy-gold)]" />
+            {network}
+          </span>
+          <span
+            className={`inline-flex items-center gap-2 border px-3 py-1.5 text-[11px] uppercase tracking-[0.2em] ${
+              onInjective
+                ? "border-[var(--turf-line)] text-[var(--floodlight)]/70"
+                : "border-[var(--whistle-red)]/40 text-[var(--whistle-red)]"
+            }`}
+          >
+            <span
+              className={`h-1.5 w-1.5 rounded-full ${
+                onInjective ? "bg-[var(--pitch-mid)]" : "bg-[var(--whistle-red)]"
+              }`}
+            />
+            {isConnected
+              ? onInjective
+                ? `Injective · ${INJECTIVE_CHAIN_ID}`
+                : `Wrong network · ${chainId ?? "—"}`
+              : "Wallet disconnected"}
+          </span>
+        </div>
+      </header>
+
+      {!getStoredUser() && (
+        <div className="relative mt-6 border border-[var(--whistle-red)]/40 bg-[var(--whistle-red)]/10 px-4 py-3 text-sm text-[var(--floodlight)]/90">
+          Connect and sign in from the nav to fund your Arena64 account.
+        </div>
+      )}
+
+      {msg && (
+        <div
+          role="status"
+          className="relative mt-6 flex items-start justify-between gap-3 border border-[var(--trophy-gold)]/40 bg-[var(--trophy-gold)]/10 px-4 py-3 text-sm text-[var(--floodlight)]"
+        >
+          <p className="min-w-0 flex-1 leading-relaxed">{msg}</p>
+          <button
+            type="button"
+            className="shrink-0 text-xs uppercase tracking-wider text-[var(--trophy-gold)] opacity-80 hover:opacity-100"
+            onClick={() => setMsg("")}
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Balance hero */}
+      <section className="relative mt-8 overflow-hidden border border-[var(--turf-line)]">
+        <div className="absolute inset-0 pitch-surface opacity-80" />
+        <div className="absolute inset-0 bg-gradient-to-br from-[var(--night-sky)]/40 via-transparent to-[var(--trophy-gold)]/5" />
+        <div className="relative grid gap-0 lg:grid-cols-[1.35fr_1fr]">
+          <div className="border-b border-[var(--turf-line)] p-6 sm:p-8 lg:border-b-0 lg:border-r">
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--floodlight)]/45">
+              Arena64 balance
             </p>
-          )}
-        </div>
-        <div>
-          <p className="text-xs uppercase opacity-50">Arena64 Balance</p>
-          <p className="led-title text-3xl">{(Number(available) + Number(locked)).toFixed(2)}</p>
-          <p className="mt-1 text-xs text-[var(--floodlight)]/55">
-            Available {Number(available).toFixed(2)} · Locked {Number(locked).toFixed(2)}
-          </p>
-        </div>
-      </div>
+            <p className="led-title mt-3 text-6xl tracking-wide text-[var(--floodlight)] sm:text-7xl">
+              {totalArena.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })}
+              <span className="ml-2 text-2xl text-[var(--trophy-gold)] sm:text-3xl">USDC</span>
+            </p>
+            <div className="mt-6 grid grid-cols-2 gap-3">
+              <div className="border border-white/10 bg-black/20 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--floodlight)]/40">Available</p>
+                <p className="mt-1 font-mono text-xl tabular-nums">
+                  {Number(available).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+              <div className="border border-white/10 bg-black/20 px-4 py-3">
+                <p className="text-[10px] uppercase tracking-[0.22em] text-[var(--floodlight)]/40">Locked</p>
+                <p className="mt-1 font-mono text-xl tabular-nums">
+                  {Number(locked).toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </p>
+              </div>
+            </div>
+          </div>
 
-      <div className="mt-8 space-y-4 border border-[var(--trophy-gold)]/30 p-5">
-        <p className="led-title text-2xl text-[var(--trophy-gold)]">Fund Arena64 Account</p>
-        <p className="text-sm font-mono text-[var(--floodlight)]/55">
-          Connected Wallet → Arena64 Treasury → Arena64 Account (Available ↑)
-        </p>
-        <div className="flex gap-2 text-xs uppercase tracking-wider">
-          <button
-            type="button"
-            onClick={() => setSource("injective")}
-            className={`btn-press btn-tap px-3 py-2 ${source === "injective" ? "bg-[var(--trophy-gold)] text-[var(--night-sky)]" : "border border-white/20"}`}
-          >
-            On Injective
-          </button>
-          <button
-            type="button"
-            onClick={() => setSource("cctp")}
-            className={`btn-press btn-tap px-3 py-2 ${source === "cctp" ? "bg-[var(--trophy-gold)] text-[var(--night-sky)]" : "border border-white/20"}`}
-          >
-            From another chain (CCTP)
-          </button>
-        </div>
+          <div className="flex flex-col justify-between p-6 sm:p-8">
+            <div>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-[11px] uppercase tracking-[0.28em] text-[var(--floodlight)]/45">
+                  Connected wallet
+                </p>
+                <button
+                  type="button"
+                  className="text-[10px] uppercase tracking-[0.18em] text-[var(--trophy-gold)]/80 hover:text-[var(--trophy-gold)]"
+                  onClick={() => refreshWalletUsdc().catch(() => undefined)}
+                >
+                  Refresh
+                </button>
+              </div>
+              <p className="mt-3 font-mono text-sm tracking-wide text-[var(--floodlight)]/90">{walletLabel}</p>
+              <p className="led-title mt-5 text-4xl text-[var(--floodlight)]">
+                {walletUsdcLabel}
+                <span className="ml-2 text-lg text-[var(--floodlight)]/45">USDC</span>
+              </p>
+              <p className="mt-1 text-xs text-[var(--floodlight)]/45">On-chain · Injective EVM</p>
+            </div>
 
-        {source === "injective" ? (
-          <>
-            <p className="text-sm text-[var(--floodlight)]/60">
-              1) Switch MetaMask to <strong>Injective EVM Testnet</strong> (chain 1439). 2) Get USDC
-              from the{" "}
+            <div className="mt-6 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={importUsdcToken}
+                className="btn-press border border-white/15 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/75 hover:border-[var(--trophy-gold)]/40 hover:text-[var(--floodlight)]"
+              >
+                Import USDC
+              </button>
+              {ownerAddress && (
+                <a
+                  href={`${explorer}/token/${usdcAddress}?a=${ownerAddress}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="btn-press border border-white/15 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/75 hover:border-[var(--trophy-gold)]/40"
+                >
+                  Explorer
+                </a>
+              )}
               <a
-                className="underline"
                 href={cfg?.external_faucets?.circle || CIRCLE_FAUCET}
                 target="_blank"
                 rel="noreferrer"
+                className="btn-press border border-white/15 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/75 hover:border-[var(--trophy-gold)]/40"
               >
                 Circle faucet
-              </a>{" "}
-              — select <strong>Injective</strong> (not Sepolia). 3) Get INJ for gas via{" "}
-              <Link className="underline" href="/claim">
-                Claim 1 INJ
-              </Link>{" "}
-              or the{" "}
-              <a
-                className="underline"
-                href={cfg?.external_faucets?.injective || INJECTIVE_TESTNET_FAUCET}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Injective faucet
               </a>
-              . Token:{" "}
-              <a
-                className="font-mono underline break-all"
-                href={`${explorer}/token/${usdcAddress}`}
-                target="_blank"
-                rel="noreferrer"
+              <Link
+                href="/claim"
+                className="btn-press border border-white/15 bg-black/25 px-3 py-2 text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/75 hover:border-[var(--trophy-gold)]/40"
               >
-                {usdcAddress}
-              </a>
-            </p>
-            <div className="flex flex-wrap items-end gap-3">
-              <label className="flex flex-col gap-1 text-xs uppercase tracking-wider opacity-60">
-                Amount
-                <input
-                  className="w-28 border border-white/20 bg-transparent px-3 py-2 text-sm text-[var(--floodlight)]"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                />
-              </label>
+                Claim INJ
+              </Link>
+            </div>
+
+            {walletUsdcStatus === "ok" && walletUsdc === 0 && (
+              <p className="mt-4 text-xs leading-relaxed text-[var(--whistle-red)]/90">
+                No Injective USDC yet. At Circle faucet choose Injective — Sepolia balances do not appear here.
+              </p>
+            )}
+            {walletUsdcStatus === "error" && (
+              <p className="mt-4 text-xs text-[var(--whistle-red)]/90">
+                Could not read on-chain balance. Switch to Injective, then Refresh.
+              </p>
+            )}
+          </div>
+        </div>
+      </section>
+
+      {/* Transfer desk */}
+      <section className="relative mt-6 grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+        <div className="border border-[var(--trophy-gold)]/25 bg-[var(--night-sky)]/55 p-5 sm:p-6">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <h2 className="led-title text-3xl text-[var(--trophy-gold)]">Deposit</h2>
+              <p className="mt-1 text-xs text-[var(--floodlight)]/50">
+                Wallet → Treasury → Arena Available
+              </p>
+            </div>
+            <div className="flex border border-white/10 p-0.5 text-[10px] uppercase tracking-[0.14em]">
               <button
                 type="button"
-                disabled={busy || !treasuryAddress}
-                onClick={depositOnchain}
-                className="btn-press btn-tap bg-[var(--trophy-gold)] px-5 py-3 text-sm font-semibold uppercase text-[var(--night-sky)] disabled:opacity-40"
+                onClick={() => setSource("injective")}
+                className={`btn-press px-3 py-1.5 ${
+                  source === "injective"
+                    ? "bg-[var(--trophy-gold)] text-[var(--night-sky)]"
+                    : "text-[var(--floodlight)]/55 hover:text-[var(--floodlight)]"
+                }`}
               >
-                {busy ? "Confirming…" : "Deposit to Arena64 Account"}
+                Injective
+              </button>
+              <button
+                type="button"
+                onClick={() => setSource("cctp")}
+                className={`btn-press px-3 py-1.5 ${
+                  source === "cctp"
+                    ? "bg-[var(--trophy-gold)] text-[var(--night-sky)]"
+                    : "text-[var(--floodlight)]/55 hover:text-[var(--floodlight)]"
+                }`}
+              >
+                CCTP
               </button>
             </div>
-            {phase && <p className="text-xs text-[var(--trophy-gold)]/80">{phase}</p>}
-            {(submittedHash || manualHash) && (
-              <p className="text-xs break-all opacity-70">
-                Tx:{" "}
+          </div>
+
+          {source === "injective" ? (
+            <div className="mt-6 space-y-5">
+              <div className="border border-white/10 bg-black/25 p-4">
+                <div className="flex items-center justify-between gap-2">
+                  <label className="text-[10px] uppercase tracking-[0.22em] text-[var(--floodlight)]/40">
+                    Amount
+                  </label>
+                  <span className="text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/35">
+                    USDC
+                  </span>
+                </div>
+                <div className="mt-2 flex items-baseline gap-3">
+                  <input
+                    inputMode="decimal"
+                    className="w-full bg-transparent font-mono text-4xl tabular-nums text-[var(--floodlight)] outline-none placeholder:text-white/20"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    placeholder="0.00"
+                  />
+                </div>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  {DEPOSIT_PRESETS.map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setAmount(p)}
+                      className={`btn-press border px-3 py-1.5 font-mono text-xs tabular-nums ${
+                        amount === p
+                          ? "border-[var(--trophy-gold)]/60 bg-[var(--trophy-gold)]/15 text-[var(--trophy-gold)]"
+                          : "border-white/10 text-[var(--floodlight)]/60 hover:border-white/25"
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={walletUsdc == null || walletUsdc <= 0}
+                    onClick={() =>
+                      setAmount(
+                        walletUsdc != null
+                          ? String(Math.floor(walletUsdc * 100) / 100)
+                          : amount
+                      )
+                    }
+                    className="btn-press border border-white/10 px-3 py-1.5 text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/60 hover:border-white/25 disabled:opacity-30"
+                  >
+                    Max
+                  </button>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                disabled={busy || !treasuryAddress || !getStoredUser()}
+                onClick={depositOnchain}
+                className="btn-press btn-tap w-full bg-[var(--trophy-gold)] px-5 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--night-sky)] disabled:opacity-40"
+              >
+                {busy && phase ? phase : busy ? "Confirming…" : "Deposit USDC"}
+              </button>
+
+              {(phase || submittedHash) && (
+                <div className="border border-[var(--trophy-gold)]/20 bg-[var(--trophy-gold)]/5 px-4 py-3 text-xs">
+                  {phase && <p className="text-[var(--trophy-gold)]">{phase}</p>}
+                  {(submittedHash || manualHash) && (
+                    <p className="mt-1 font-mono text-[var(--floodlight)]/65">
+                      Tx{" "}
+                      <a
+                        className="underline decoration-[var(--turf-line)] underline-offset-2 hover:text-[var(--floodlight)]"
+                        href={`${explorer}/tx/${submittedHash || manualHash}`}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        {shortenHash(submittedHash || manualHash)}
+                      </a>
+                    </p>
+                  )}
+                </div>
+              )}
+
+              <details
+                className="border-t border-white/10 pt-4"
+                open={Boolean(manualHash || submittedHash)}
+              >
+                <summary className="cursor-pointer text-[11px] uppercase tracking-[0.2em] text-[var(--floodlight)]/40 hover:text-[var(--floodlight)]/70">
+                  Recover / verify deposit
+                </summary>
+                <p className="mt-3 text-xs leading-relaxed text-[var(--floodlight)]/45">
+                  If MetaMask failed but Blockscout shows success, paste the hash to credit your account.
+                </p>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row">
+                  <input
+                    className="min-w-0 flex-1 border border-white/15 bg-black/30 px-3 py-2.5 font-mono text-xs text-[var(--floodlight)] outline-none focus:border-[var(--trophy-gold)]/50"
+                    placeholder="0x… transaction hash"
+                    value={manualHash}
+                    onChange={(e) => setManualHash(e.target.value)}
+                  />
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={submitManual}
+                    className="btn-press border border-[var(--turf-line)] px-4 py-2.5 text-[10px] uppercase tracking-[0.16em]"
+                  >
+                    Verify
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={runSyncDeposits}
+                    className="btn-press border border-[var(--trophy-gold)]/40 px-4 py-2.5 text-[10px] uppercase tracking-[0.16em] text-[var(--trophy-gold)]"
+                  >
+                    Sync
+                  </button>
+                </div>
+              </details>
+
+              <p className="text-[11px] leading-relaxed text-[var(--floodlight)]/40">
+                Need funds?{" "}
                 <a
-                  className="underline"
-                  href={`${explorer}/tx/${submittedHash || manualHash}`}
+                  className="text-[var(--floodlight)]/65 underline underline-offset-2 hover:text-[var(--trophy-gold)]"
+                  href={cfg?.external_faucets?.circle || CIRCLE_FAUCET}
                   target="_blank"
                   rel="noreferrer"
                 >
-                  {submittedHash || manualHash}
+                  Circle USDC
+                </a>{" "}
+                (Injective) ·{" "}
+                <Link className="text-[var(--floodlight)]/65 underline underline-offset-2 hover:text-[var(--trophy-gold)]" href="/claim">
+                  Claim INJ
+                </Link>{" "}
+                ·{" "}
+                <a
+                  className="font-mono text-[10px] text-[var(--floodlight)]/50 underline underline-offset-2"
+                  href={`${explorer}/token/${usdcAddress}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  {shortenHash(usdcAddress)}
                 </a>
               </p>
-            )}
-            <details className="border-t border-white/10 pt-4" open={Boolean(manualHash || submittedHash)}>
-              <summary className="cursor-pointer text-xs uppercase tracking-widest opacity-50">
-                Already sent USDC to treasury?
-              </summary>
-              <p className="mt-2 text-xs text-[var(--floodlight)]/50">
-                If MetaMask says failed but the explorer shows success, paste the hash here to credit your account.
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              <p className="text-xs text-[var(--floodlight)]/50">
+                Bridge USDC via CCTP, then submit the burn hash and attestation.
               </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                <input
-                  className="min-w-[16rem] flex-1 border border-white/20 bg-transparent px-3 py-2 text-sm font-mono"
-                  placeholder="0x… tx hash"
-                  value={manualHash}
-                  onChange={(e) => setManualHash(e.target.value)}
-                />
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={submitManual}
-                  className="btn-press btn-tap border border-[var(--turf-line)] px-4 py-2 text-xs uppercase"
-                >
-                  Verify & credit account
-                </button>
-                <button
-                  type="button"
-                  disabled={busy}
-                  onClick={() => {
-                    setBusy(true);
-                    setPhase("Scanning treasury transfers…");
-                    syncDeposits()
-                      .catch(() => undefined)
-                      .finally(() => {
-                        setBusy(false);
-                        setPhase((p) => (p === "Scanning treasury transfers…" ? "" : p));
-                      });
-                  }}
-                  className="btn-press btn-tap border border-[var(--trophy-gold)]/50 px-4 py-2 text-xs uppercase text-[var(--trophy-gold)]"
-                >
-                  Sync deposits
-                </button>
-              </div>
-            </details>
-          </>
-        ) : (
-          <div className="space-y-3">
-            <input
-              className="w-full bg-transparent border border-white/20 px-3 py-2 text-sm"
-              placeholder="Burn tx hash"
-              value={cctpHash}
-              onChange={(e) => setCctpHash(e.target.value)}
-            />
-            <input
-              className="w-full bg-transparent border border-white/20 px-3 py-2 text-sm"
-              placeholder="Iris attestation"
-              value={cctpAttest}
-              onChange={(e) => setCctpAttest(e.target.value)}
-            />
-            <input
-              className="w-full bg-transparent border border-white/20 px-3 py-2 text-sm"
-              placeholder="Amount USDC"
-              value={cctpAmount}
-              onChange={(e) => setCctpAmount(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={fundCctp}
-              className="btn-press btn-tap bg-[var(--trophy-gold)] px-5 py-3 uppercase text-sm font-semibold text-[var(--night-sky)]"
-            >
-              Deposit to Arena64 Account via CCTP
-            </button>
-          </div>
-        )}
-      </div>
+              <input
+                className="w-full border border-white/15 bg-black/30 px-3 py-3 font-mono text-sm outline-none focus:border-[var(--trophy-gold)]/50"
+                placeholder="Burn tx hash"
+                value={cctpHash}
+                onChange={(e) => setCctpHash(e.target.value)}
+              />
+              <input
+                className="w-full border border-white/15 bg-black/30 px-3 py-3 font-mono text-sm outline-none focus:border-[var(--trophy-gold)]/50"
+                placeholder="Iris attestation"
+                value={cctpAttest}
+                onChange={(e) => setCctpAttest(e.target.value)}
+              />
+              <input
+                className="w-full border border-white/15 bg-black/30 px-3 py-3 font-mono text-sm outline-none focus:border-[var(--trophy-gold)]/50"
+                placeholder="Amount USDC"
+                value={cctpAmount}
+                onChange={(e) => setCctpAmount(e.target.value)}
+              />
+              <button
+                type="button"
+                onClick={fundCctp}
+                className="btn-press btn-tap w-full bg-[var(--trophy-gold)] px-5 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--night-sky)]"
+              >
+                Credit via CCTP
+              </button>
+            </div>
+          )}
+        </div>
 
-      <div className="mt-8 space-y-3 border border-white/10 p-5">
-        <p className="led-title text-xl">Return USDC to Connected Wallet</p>
-        <p className="text-sm text-[var(--floodlight)]/55">
-          Withdraws from Available only. Locked funds stay until the tournament ends.
-        </p>
-        <div className="flex flex-wrap items-end gap-3">
-          <label className="flex flex-col gap-1 text-xs uppercase tracking-wider opacity-60">
-            Amount
+        <div
+          id="withdraw"
+          className="flex flex-col border border-white/10 bg-[var(--night-sky)]/55 p-5 sm:p-6"
+        >
+          <h2 className="led-title text-3xl">Withdraw</h2>
+          <p className="mt-1 text-xs text-[var(--floodlight)]/50">
+            Returns Available USDC to your connected wallet. Locked stays until the tournament ends.
+          </p>
+
+          <div className="mt-6 flex-1 border border-white/10 bg-black/25 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <label className="text-[10px] uppercase tracking-[0.22em] text-[var(--floodlight)]/40">
+                Amount
+              </label>
+              <button
+                type="button"
+                disabled={Number(available) <= 0}
+                onClick={() =>
+                  setWithdrawAmt(String(Math.floor(Number(available) * 100) / 100))
+                }
+                className="text-[10px] uppercase tracking-[0.16em] text-[var(--trophy-gold)]/80 hover:text-[var(--trophy-gold)] disabled:opacity-30"
+              >
+                Max {Number(available).toFixed(2)}
+              </button>
+            </div>
             <input
-              className="w-28 border border-white/20 bg-transparent px-3 py-2 text-sm"
+              inputMode="decimal"
+              className="mt-2 w-full bg-transparent font-mono text-4xl tabular-nums outline-none placeholder:text-white/20"
               value={withdrawAmt}
               onChange={(e) => setWithdrawAmt(e.target.value)}
+              placeholder="0.00"
             />
-          </label>
+          </div>
+
           <button
             type="button"
-            disabled={busy || !cfg?.withdraw_enabled}
+            disabled={busy || !cfg?.withdraw_enabled || !getStoredUser()}
             onClick={doWithdraw}
-            className="btn-press btn-tap border border-[var(--kit-home)] px-5 py-3 text-sm uppercase disabled:opacity-40"
+            className="btn-press btn-tap mt-5 w-full border border-[var(--kit-home)] bg-[var(--kit-home)]/15 px-5 py-4 text-sm font-semibold uppercase tracking-[0.12em] text-[var(--floodlight)] disabled:opacity-40"
           >
-            Withdraw
+            Withdraw to wallet
+          </button>
+          {!cfg?.withdraw_enabled && (
+            <p className="mt-3 text-[11px] leading-relaxed text-[var(--floodlight)]/35">
+              Withdrawals are offline until the treasury hot wallet is configured on the API.
+            </p>
+          )}
+
+          <div className="mt-auto flex flex-wrap gap-2 pt-6">
+            <Link
+              href="/dashboard"
+              className="btn-press border border-[var(--turf-line)] px-4 py-2.5 text-[10px] uppercase tracking-[0.16em]"
+            >
+              Dashboard
+            </Link>
+            <Link
+              href="/tournaments"
+              className="btn-press bg-[var(--kit-home)] px-4 py-2.5 text-[10px] font-semibold uppercase tracking-[0.16em]"
+            >
+              Tournaments
+            </Link>
+          </div>
+        </div>
+      </section>
+
+      {/* Activity */}
+      <section className="relative mt-6 border border-white/10">
+        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
+          <h2 className="text-[11px] uppercase tracking-[0.28em] text-[var(--floodlight)]/45">Activity</h2>
+          <button
+            type="button"
+            disabled={busy || !getStoredUser()}
+            onClick={() => refresh().catch(() => undefined)}
+            className="text-[10px] uppercase tracking-[0.16em] text-[var(--floodlight)]/40 hover:text-[var(--trophy-gold)] disabled:opacity-30"
+          >
+            Refresh
           </button>
         </div>
-        {!cfg?.withdraw_enabled && (
-          <p className="text-xs opacity-50">
-            Withdrawals need the Arena64 treasury hot-wallet private key configured on the API
-            (`ARENA64_TREASURY_PRIVATE_KEY`, matching `ARENA64_TREASURY_ADDRESS`).
-          </p>
-        )}
-      </div>
-
-      <div className="mt-8">
-        <p className="text-xs uppercase tracking-widest opacity-50 mb-3">Activity</p>
-        <ul className="space-y-2 text-sm">
-          {txs.map((t) => (
-            <li key={t.id} className="flex justify-between border-b border-white/5 py-2 font-mono text-xs">
-              <span>{t.type}</span>
-              <span>
-                {t.amount_usdc > 0 ? "+" : ""}
-                {t.amount_usdc} · {new Date(t.created_at).toLocaleString()}
-              </span>
-            </li>
-          ))}
-          {!txs.length && <li className="opacity-40">No ledger rows yet.</li>}
-        </ul>
-      </div>
-
-      <div className="mt-6 flex flex-wrap gap-3">
-        <Link href="/dashboard" className="btn-press border border-[var(--turf-line)] px-5 py-3 uppercase text-sm">
-          Dashboard
-        </Link>
-        <Link href="/tournaments" className="btn-press bg-[var(--kit-home)] px-5 py-3 uppercase text-sm font-semibold">
-          Enter tournaments
-        </Link>
-      </div>
-
-      {msg && <p className="mt-4 text-[var(--trophy-gold)]">{msg}</p>}
-      {!getStoredUser() && (
-        <p className="mt-4 text-[var(--whistle-red)]">Connect and sign in from the nav to fund your account.</p>
-      )}
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[28rem] text-left text-sm">
+            <thead>
+              <tr className="border-b border-white/5 text-[10px] uppercase tracking-[0.18em] text-[var(--floodlight)]/35">
+                <th className="px-5 py-3 font-normal">Type</th>
+                <th className="px-5 py-3 font-normal">Amount</th>
+                <th className="px-5 py-3 font-normal">When</th>
+                <th className="px-5 py-3 font-normal">Ref</th>
+              </tr>
+            </thead>
+            <tbody>
+              {txs.map((t) => (
+                <tr key={t.id} className="border-b border-white/5 font-mono text-xs last:border-0">
+                  <td className="px-5 py-3 capitalize text-[var(--floodlight)]/80">
+                    {formatTxType(t.type)}
+                  </td>
+                  <td
+                    className={`px-5 py-3 tabular-nums ${
+                      t.amount_usdc >= 0 ? "text-[var(--trophy-gold)]" : "text-[var(--whistle-red)]"
+                    }`}
+                  >
+                    {t.amount_usdc > 0 ? "+" : ""}
+                    {t.amount_usdc} USDC
+                  </td>
+                  <td className="px-5 py-3 text-[var(--floodlight)]/45">
+                    {new Date(t.created_at).toLocaleString()}
+                  </td>
+                  <td className="px-5 py-3 text-[var(--floodlight)]/45">
+                    {t.external_ref ? (
+                      <a
+                        href={`${explorer}/tx/${t.external_ref}`}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="underline underline-offset-2 hover:text-[var(--floodlight)]"
+                      >
+                        {shortenHash(t.external_ref)}
+                      </a>
+                    ) : (
+                      "—"
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {!txs.length && (
+                <tr>
+                  <td colSpan={4} className="px-5 py-10 text-center text-xs text-[var(--floodlight)]/35">
+                    No ledger activity yet. Your first deposit will show here.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
     </div>
   );
 }
