@@ -45,10 +45,15 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
     try {
       const connector = connectors.find((c) => c.uid === connectorId || c.id === connectorId);
       if (!connector) throw new Error("Wallet not available");
-      await connectAsync({ connector, chainId: INJECTIVE_CHAIN_ID });
+      const result = await connectAsync({ connector, chainId: INJECTIVE_CHAIN_ID });
+      const connected = result.accounts?.[0];
+      // Pass address from connect result — React state may not have updated yet
+      await loginWithWallet(connected);
       setOpen(false);
     } catch (e: unknown) {
-      setLocalError(e instanceof Error ? e.message : String(e));
+      const msg = e instanceof Error ? e.message : String(e);
+      // Keep panel open so user can retry "Sign Arena64 login" if they rejected once
+      setLocalError(msg);
     }
   }
 

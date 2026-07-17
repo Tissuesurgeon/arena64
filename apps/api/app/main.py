@@ -34,9 +34,21 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Never combine allow_origins=["*"] with allow_credentials=True — browsers block the response
+# (breaks Vercel → Railway wallet login). Mirror configured origins + Vercel preview hosts.
+_cors_origins = list(settings.cors_origins)
+if settings.app_env == "development":
+    for _o in (
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ):
+        if _o not in _cors_origins:
+            _cors_origins.append(_o)
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=settings.cors_origins + ["*"],
+    allow_origins=_cors_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

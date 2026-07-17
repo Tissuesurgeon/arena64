@@ -46,9 +46,11 @@ The API normalizes `postgres://` / `postgresql://` to `postgresql+asyncpg://` au
 | `REDIS_URL` | Redis plugin URL |
 | `SECRET_KEY` | Long random secret |
 | `SERVICE_API_KEY` | Shared secret (runtime uses the same) |
-| `API_CORS_ORIGINS` | `https://your-app.vercel.app` |
+| `API_CORS_ORIGINS` | `https://your-app.vercel.app` (no trailing slash; comma-separate preview+prod) |
 | `APP_ENV` | `production` |
 | `INJECTIVE_NETWORK` | `testnet` |
+
+> **Sign-in / CORS:** The API allows `https://*.vercel.app` automatically. Still set `API_CORS_ORIGINS` to your production Vercel URL. Do **not** use `*` with credentials — that blocks browser login.
 
 Optional: `ARENA64_TREASURY_ADDRESS`, `ARENA64_TREASURY_PRIVATE_KEY`, `INJ_KEY_EVM`, `INJ_FAUCET_ADDRESS`, `QWEN_API_KEY` / `DASHSCOPE_API_KEY`, `AI_PROVIDER=qwen` or `rules`, `RUNTIME_LLM_ENABLED=true`, `RUNTIME_POLL_SECONDS=2.5`.
 
@@ -103,6 +105,8 @@ Run locally against the deployed API, or deploy `apps/mcp-server` separately. No
 - [ ] Backend uses root **`Dockerfile`** (API + AI runtime)
 - [ ] `/health` green; runtime logs show skills
 - [ ] Vercel root = `apps/web` with production `NEXT_PUBLIC_*`
-- [ ] `API_CORS_ORIGINS` includes Vercel URL
+- [ ] `NEXT_PUBLIC_API_URL` = Railway **https** URL (no trailing slash)
+- [ ] `API_CORS_ORIGINS` includes Vercel URL (MetaMask login fails if CORS is wrong)
+- [ ] Wallet: MetaMask on Injective EVM testnet (chain **1439**)
 - [ ] Treasury / faucet keys set if testing deposits and INJ claims
 - [ ] Never put `INJ_KEY_EVM` or treasury private keys in Vercel

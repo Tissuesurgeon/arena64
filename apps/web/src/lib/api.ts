@@ -1,4 +1,8 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+function normalizeApiUrl(raw: string): string {
+  return raw.trim().replace(/\/+$/, "");
+}
+
+const API_URL = normalizeApiUrl(process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000");
 
 export type User = {
   id: string;
@@ -69,15 +73,41 @@ function authHeaders(): HeadersInit {
   return token ? { Authorization: `Bearer ${token}` } : {};
 }
 
+function assertApiReachable(): void {
+  if (typeof window === "undefined") return;
+  const pageHttps = window.location.protocol === "https:";
+  if (pageHttps && API_URL.startsWith("http://")) {
+    throw new Error(
+      "API is configured with http:// but the site is https:// — set NEXT_PUBLIC_API_URL to your Railway https URL and redeploy Vercel."
+    );
+  }
+  if (
+    pageHttps &&
+    (API_URL.includes("localhost") || API_URL.includes("127.0.0.1"))
+  ) {
+    throw new Error(
+      "NEXT_PUBLIC_API_URL still points at localhost. Set it to your Railway API URL in Vercel env and redeploy."
+    );
+  }
+}
+
 export async function api<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_URL}${path}`, {
-    ...init,
-    headers: {
-      "Content-Type": "application/json",
-      ...authHeaders(),
-      ...(init?.headers || {}),
-    },
-  });
+  assertApiReachable();
+  let res: Response;
+  try {
+    res = await fetch(`${API_URL}${path}`, {
+      ...init,
+      headers: {
+        "Content-Type": "application/json",
+        ...authHeaders(),
+        ...(init?.headers || {}),
+      },
+    });
+  } catch {
+    throw new Error(
+      `Cannot reach API at ${API_URL}. Check NEXT_PUBLIC_API_URL and Railway CORS (API_CORS_ORIGINS).`
+    );
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: res.statusText }));
     throw new Error(typeof err.detail === "string" ? err.detail : JSON.stringify(err.detail));

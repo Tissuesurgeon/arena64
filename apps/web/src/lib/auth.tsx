@@ -18,7 +18,7 @@ type AuthContextValue = {
   busy: boolean;
   error: string | null;
   /** Sign Arena64 login message with connected wallet and store JWT. */
-  loginWithWallet: () => Promise<User>;
+  loginWithWallet: (walletAddress?: string) => Promise<User>;
   /** Dev-only demo session (API rejects outside development). */
   loginDemo: () => Promise<User>;
   logout: () => void;
@@ -55,48 +55,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [address, user]);
 
-  const loginWithWallet = useCallback(async () => {
-    setBusy(true);
-    setError(null);
-    try {
-      if (!address || !isConnected) {
-        throw new Error("Connect a wallet first");
-      }
-      if (chainId !== INJECTIVE_CHAIN_ID) {
-        try {
-          await switchChainAsync({ chainId: INJECTIVE_CHAIN_ID });
-        } catch {
-          throw new Error(
-            `Switch to Injective EVM (chain ${INJECTIVE_CHAIN_ID}) in your wallet, then try again.`
-          );
+  const loginWithWallet = useCallback(
+    async (walletAddress?: string) => {
+      setBusy(true);
+      setError(null);
+      try {
+        const raw = walletAddress || address;
+        if (!raw) {
+          throw new Error("Connect a wallet first");
         }
-      }
+        if (chainId != null && chainId !== INJECTIVE_CHAIN_ID) {
+          try {
+            await switchChainAsync({ chainId: INJECTIVE_CHAIN_ID });
+          } catch {
+            throw new Error(
+              `Switch to Injective EVM (chain ${INJECTIVE_CHAIN_ID}) in your wallet, then try again.`
+            );
+          }
+        }
 
-      const nonce = await api<{ message: string; nonce: string }>(
-        `/api/auth/nonce?wallet_address=${address}`
-      );
-      const signature = await signMessageAsync({ message: nonce.message });
-      const data = await api<{ access_token: string; user: User }>("/api/auth/login", {
-        method: "POST",
-        body: JSON.stringify({
-          wallet_address: address,
-          signature,
-          message: nonce.message,
-          display_name: shorten(address),
-        }),
-      });
-      localStorage.setItem("arena64_token", data.access_token);
-      localStorage.setItem("arena64_user", JSON.stringify(data.user));
-      setUser(data.user);
-      return data.user;
-    } catch (e: unknown) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(msg);
-      throw e;
-    } finally {
-      setBusy(false);
-    }
-  }, [address, isConnected, chainId, signMessageAsync, switchChainAsync]);
+        const wallet = raw.toLowerCase();
+        const nonce = await api<{ message: string; nonce: string }>(
+          `/api/auth/nonce?wallet_address=${encodeURIComponent(wallet)}`
+        );
+        const signature = await signMessageAsync({ message: nonce.message, account: wallet as `0x${string}` });
+        const data = await api<{ access_token: string; user: User }>("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            wallet_address: wallet,
+            signature,
+            message: nonce.message,
+            display_name: shorten(wallet),
+          }),
+        });
+        localStorage.setItem("arena64_token", data.access_token);
+        localStorage.setItem("arena64_user", JSON.stringify(data.user));
+        setUser(data.user);
+        return data.user;
+      } catch (e: unknown) {
+        const msg = e instanceof Error ? e.message : String(e);
+        setError(msg);
+        throw e;
+      } finally {
+        setBusy(false);
+      }
+    },
+    [address, chainId, signMessageAsync, switchChainAsync]
+  );
 
   const loginDemo = useCallback(async () => {
     setBusy(true);
