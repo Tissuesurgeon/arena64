@@ -168,7 +168,9 @@ export function ConnectWallet({ variant = "nav", className = "" }: Props) {
                     onClick={() => onConnect(c.uid)}
                     className="btn-press btn-tap w-full border border-[var(--turf-line)] px-3 py-2 text-left text-sm transition hover:border-[var(--trophy-gold)] hover:text-[var(--trophy-gold)]"
                   >
-                    {c.name === "Injected" ? "Browser Wallet" : c.name}
+                    {c.name === "Injected" || c.id === "injected"
+                      ? "MetaMask / Browser Wallet"
+                      : c.name}
                   </button>
                 </li>
               ))}
